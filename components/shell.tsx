@@ -22,6 +22,7 @@ import {
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
   const navItems = [
     { href: "/", label: "Dashboard", badge: undefined, icon: LayoutDashboard },
@@ -111,11 +112,68 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="relative p-2 bg-card rounded-full border border-border cursor-pointer hover:border-text-secondary transition-colors">
+          <div className="flex items-center gap-4 relative">
+            <div 
+              className="relative p-2 bg-card rounded-full border border-border cursor-pointer hover:border-text-secondary transition-colors"
+              onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+            >
               <Bell className="w-5 h-5 text-text-secondary" />
               <div className="absolute top-2 right-2 w-2 h-2 bg-danger rounded-full ring-2 ring-background animate-pulse"></div>
             </div>
+            
+            {/* Notification Dropdown */}
+            {isNotificationOpen && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                className="absolute top-12 right-[120px] w-80 bg-surface/80 backdrop-blur-xl border border-border rounded-2xl shadow-2xl z-50 overflow-hidden"
+              >
+                <div className="p-4 border-b border-border flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-widest text-text-primary">Notifications</h4>
+                  <span className="text-[10px] text-text-secondary hover:text-text-primary cursor-pointer">Mark all as read</span>
+                </div>
+                <div className="divide-y divide-border">
+                  {/* Mock Notification 1 */}
+                  <div className="p-4 hover:bg-white/5 transition-colors cursor-pointer flex gap-3">
+                    <div className="w-8 h-8 rounded-full bg-danger/10 border border-danger/20 flex flex-shrink-0 items-center justify-center text-danger mt-1">
+                      <ShieldCheck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-text-primary">Security Alert: Unusual Activity</p>
+                      <p className="text-[10px] text-text-secondary mt-1">Multiple routing attempts detected from unregistered node identity.</p>
+                      <p className="text-[10px] text-danger font-bold mt-2 uppercase tracking-widest">2 mins ago</p>
+                    </div>
+                  </div>
+                  {/* Mock Notification 2 */}
+                  <div className="p-4 hover:bg-white/5 transition-colors cursor-pointer flex gap-3">
+                    <div className="w-8 h-8 rounded-full bg-success/10 border border-success/20 flex flex-shrink-0 items-center justify-center text-success mt-1">
+                      <Activity className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-text-primary">Transaction Approved</p>
+                      <p className="text-[10px] text-text-secondary mt-1">Multi-sig requirement met for Vendor Settlement Q3. Execution started.</p>
+                      <p className="text-[10px] text-text-secondary font-bold mt-2 uppercase tracking-widest">15 mins ago</p>
+                    </div>
+                  </div>
+                  {/* Mock Notification 3 */}
+                  <div className="p-4 hover:bg-white/5 transition-colors cursor-pointer flex gap-3">
+                    <div className="w-8 h-8 rounded-full bg-accent/10 border border-accent/20 flex flex-shrink-0 items-center justify-center text-accent mt-1">
+                      <Route className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-text-primary">New Transfer Request</p>
+                      <p className="text-[10px] text-text-secondary mt-1">Operation Hub is requesting 50,000 USDC from the Master Liquidity Pool.</p>
+                      <p className="text-[10px] text-text-secondary font-bold mt-2 uppercase tracking-widest">1 hour ago</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-3 bg-card border-t border-border mt-auto w-full text-center hover:bg-white/5 cursor-pointer transition-colors block">
+                   <p className="text-[10px] text-text-primary uppercase tracking-widest font-bold">View full log</p>
+                </div>
+              </motion.div>
+            )}
+
             <div className="h-8 w-[1px] bg-border"></div>
             <button className="bg-accent hover:bg-blue-400 text-white text-xs font-bold px-5 py-2.5 rounded-lg shadow-lg shadow-accent/20 transition-all">
               New Transfer
