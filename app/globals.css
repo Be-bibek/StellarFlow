@@ -1,0 +1,56 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@theme {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-card: var(--card);
+  --color-border: var(--border);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-accent: var(--accent);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
+
+@layer base {
+  :root {
+    /* Light Mode */
+    --background: #F8FAFC;
+    --surface: #FFFFFF;
+    --card: #F1F5F9;
+    --border: rgba(15, 23, 42, 0.08); /* 8% opacity */
+    --text-primary: #0F172A;
+    --text-secondary: #64748B;
+    --accent: #2563EB;
+    --success: #059669;
+    --warning: #D97706;
+    --danger: #DC2626;
+  }
+
+  .dark {
+    /* Sleek Interface (Dark Mode Default) */
+    --background: #070A13;
+    --surface: #0F1322;
+    --card: #161B30;
+    --border: rgba(255, 255, 255, 0.05); /* white/5 */
+    --text-primary: #F8FAFC;
+    --text-secondary: #94A3B8;
+    --accent: #3B82F6;
+    --success: #10B981;
+    --warning: #F59E0B;
+    --danger: #EF4444;
+  }
+
+  body {
+    @apply bg-background text-text-primary font-sans antialiased;
+  }
+}
+
+.glass {
+  @apply bg-surface/80 backdrop-blur-xl border border-border;
+}
