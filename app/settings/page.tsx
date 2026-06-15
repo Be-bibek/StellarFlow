@@ -44,7 +44,7 @@ export default function SettingsPage() {
         </div>
         
         <div className="md:col-span-9">
-          <BentoCard className="min-h-[500px]">
+          <BentoCard className="min-h-[500px] p-6">
             <AnimatePresence mode="wait">
               {activeTab === "org" && (
                 <motion.div

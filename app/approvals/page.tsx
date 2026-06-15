@@ -19,7 +19,8 @@ export default function ApprovalsPage() {
         {mockApprovals.map((req, idx) => {
           const progressPercent = (req.signed / req.required) * 100;
           return (
-            <BentoCard key={req.id} delay={0.1 + (idx * 0.1)} className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+            <BentoCard key={req.id} delay={0.1 + (idx * 0.1)} className="p-0">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center w-full p-6">
               
               <div className="col-span-1 md:col-span-4 space-y-1 border-b md:border-b-0 md:border-r border-border pb-4 md:pb-0 pr-4">
                 <div className="flex items-center gap-2 mb-2">
@@ -77,7 +78,7 @@ export default function ApprovalsPage() {
                    </Button>
                  </div>
               </div>
-
+              </div>
             </BentoCard>
           );
         })}

@@ -28,7 +28,8 @@ export default function BatchTransfersPage() {
         
         {/* Main Workspace Table Area */}
         <div className="lg:col-span-8 flex flex-col gap-4">
-          <BentoCard delay={0.1} className="flex flex-col items-center justify-center p-10 border-dashed border-2 bg-surface hover:bg-card transition-colors cursor-pointer group">
+          <BentoCard delay={0.1} className="border-dashed border-2 bg-surface hover:bg-card transition-colors cursor-pointer group p-0">
+            <div className="flex flex-col items-center justify-center p-10 h-full w-full">
             <div className="w-12 h-12 bg-card rounded-full flex items-center justify-center border border-border group-hover:scale-110 transition-transform mb-4">
               <FileUp className="w-5 h-5 text-text-secondary" />
             </div>
@@ -37,6 +38,7 @@ export default function BatchTransfersPage() {
             <Button variant="outline" size="sm">
               <FilePlus className="w-4 h-4 mr-2" /> Add Individual Line
             </Button>
+            </div>
           </BentoCard>
 
           <BentoCard delay={0.2} className="p-0 overflow-hidden bg-card border-border shadow-sm flex-1">
@@ -77,7 +79,8 @@ export default function BatchTransfersPage() {
 
         {/* Pre-Flight Sidebar */}
         <div className="lg:col-span-4">
-          <BentoCard delay={0.3} className="sticky top-24 bg-surface space-y-6">
+          <BentoCard delay={0.3} className="sticky top-24 bg-surface p-0">
+             <div className="space-y-6 p-6">
              <div className="border-b border-border pb-4">
                <h3 className="text-sm font-semibold text-text-primary flex items-center gap-2">
                  <CheckCircle2 className="w-4 h-4 text-success" /> Pre-Flight Run Manifest
@@ -111,6 +114,7 @@ export default function BatchTransfersPage() {
                <Button className="w-full shadow-lg shadow-accent/20">
                  <Play className="w-4 h-4 mr-2" /> Broadcast to Signers
                </Button>
+             </div>
              </div>
           </BentoCard>
         </div>
