@@ -6,9 +6,9 @@ import { mockWallets, mockTransactions } from "@/lib/mock-data";
 
 export default function DashboardPage() {
   return (
-    <div className="grid grid-cols-4 grid-rows-[auto_1fr_auto] gap-4 h-full">
+    <div className="grid grid-cols-1 md:grid-cols-12 auto-rows-min gap-8 h-full pb-20">
       {/* Top row */}
-      <BentoCard className="col-span-2 justify-center p-6 bg-card border-border">
+      <BentoCard className="md:col-span-12 lg:col-span-6 justify-center">
         <span className="text-[10px] text-text-secondary uppercase font-bold tracking-widest mb-1">Total Treasury Equity</span>
         <div className="flex items-baseline gap-3">
           <h2 className="text-4xl font-bold tracking-tight text-text-primary">
@@ -20,26 +20,26 @@ export default function DashboardPage() {
         </div>
       </BentoCard>
 
-      <BentoCard delay={0.1} className="justify-center p-5 bg-card border-border">
+      <BentoCard delay={0.1} className="md:col-span-6 lg:col-span-3 justify-center">
         <span className="text-[10px] text-text-secondary uppercase font-bold tracking-widest">Available Cash</span>
-        <span className="text-2xl font-bold mt-1 text-text-primary">$1,204,410</span>
-        <div className="h-1 bg-border rounded-full mt-3 overflow-hidden">
+        <span className="text-2xl lg:text-3xl font-bold mt-1 text-text-primary tracking-tight">$1,204,410</span>
+        <div className="h-1 bg-border rounded-full mt-4 overflow-hidden">
           <div className="h-full bg-success w-[62%]"></div>
         </div>
       </BentoCard>
 
-      <BentoCard delay={0.2} className="justify-center p-5 bg-card border-border">
+      <BentoCard delay={0.2} className="md:col-span-6 lg:col-span-3 justify-center">
         <span className="text-[10px] text-text-secondary uppercase font-bold tracking-widest">Spending Velocity</span>
-        <span className="text-2xl font-bold mt-1 text-danger">
+        <span className="text-2xl lg:text-3xl font-bold mt-1 text-danger tracking-tight">
           $42.8k<span className="text-xs text-text-secondary font-normal">/day</span>
         </span>
-        <div className="h-1 bg-border rounded-full mt-3 overflow-hidden">
+        <div className="h-1 bg-border rounded-full mt-4 overflow-hidden">
           <div className="h-full bg-danger w-[88%]"></div>
         </div>
       </BentoCard>
 
       {/* Middle Grid */}
-      <BentoCard delay={0.3} className="justify-between group hover:border-accent/30 cursor-pointer transition-all p-5">
+      <BentoCard delay={0.3} className="md:col-span-6 lg:col-span-3 justify-between group hover:border-accent/30 cursor-pointer">
         <div className="flex items-start justify-between">
           <div className="w-8 h-8 rounded bg-accent/10 flex items-center justify-center text-accent">
             <Wallet className="w-4 h-4" />
@@ -56,7 +56,7 @@ export default function DashboardPage() {
         </div>
       </BentoCard>
 
-      <BentoCard delay={0.4} className="justify-between group hover:border-accent/30 cursor-pointer transition-all p-5">
+      <BentoCard delay={0.4} className="md:col-span-6 lg:col-span-3 justify-between group hover:border-accent/30 cursor-pointer">
         <div className="flex items-start justify-between">
           <div className="w-8 h-8 rounded bg-warning/10 flex items-center justify-center text-warning">
              <Lock className="w-4 h-4" />
@@ -73,7 +73,7 @@ export default function DashboardPage() {
         </div>
       </BentoCard>
 
-      <BentoCard delay={0.5} className="justify-between group hover:border-accent/30 cursor-pointer transition-all p-5">
+      <BentoCard delay={0.5} className="md:col-span-6 lg:col-span-3 justify-between group hover:border-accent/30 cursor-pointer">
         <div className="flex items-start justify-between">
           <div className="w-8 h-8 rounded bg-accent/10 flex items-center justify-center text-accent">
             <RefreshCw className="w-4 h-4" />
@@ -90,7 +90,7 @@ export default function DashboardPage() {
         </div>
       </BentoCard>
 
-      <BentoCard delay={0.6} className="justify-between group hover:border-accent/30 cursor-pointer transition-all p-5">
+      <BentoCard delay={0.6} className="md:col-span-6 lg:col-span-3 justify-between group hover:border-accent/30 cursor-pointer">
         <div className="flex items-start justify-between">
           <div className="w-8 h-8 rounded bg-danger/10 flex items-center justify-center text-danger">
             <AlertCircle className="w-4 h-4" />
@@ -108,8 +108,8 @@ export default function DashboardPage() {
       </BentoCard>
 
       {/* Activity Bar */}
-      <BentoCard delay={0.7} className="col-span-4 p-6 overflow-hidden flex flex-col justify-start min-h-[300px]">
-        <div className="flex items-center justify-between mb-4">
+      <BentoCard delay={0.7} className="md:col-span-12 overflow-hidden flex flex-col justify-start min-h-[300px]">
+        <div className="flex items-center justify-between mb-6">
           <h3 className="text-sm font-bold text-text-primary">Live Treasury Activity</h3>
           <div className="flex gap-2">
             <span className="text-[10px] text-text-secondary hover:text-text-primary cursor-pointer transition-colors px-2 py-1 uppercase font-bold tracking-widest">Recent</span>
