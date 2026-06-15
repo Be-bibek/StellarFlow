@@ -39,9 +39,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-full w-full bg-background text-text-primary font-sans overflow-hidden">
-      {/* Sidebar - Fix width 260px matching Sleek Interface */}
-      <aside className="w-[260px] bg-surface border-r border-border flex flex-col flex-shrink-0 z-20 shadow-sm relative">
-        <div className="p-6 flex items-center gap-3 border-b border-border">
+      {/* Sidebar */}
+      <aside className="w-[280px] bg-surface/80 backdrop-blur-3xl border-r border-border flex flex-col flex-shrink-0 z-30 shadow-sm relative">
+        <div className="p-8 flex items-center gap-4 border-b border-border">
           <div className="w-8 h-8 rounded bg-gradient-to-br from-accent to-blue-400 flex items-center justify-center font-bold text-white shadow-lg">
             S
           </div>
@@ -93,8 +93,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col h-full min-w-0 relative">
-        {/* Header - Fixed Height 70px matching Sleek Interface */}
-        <header className="h-[70px] border-b border-border px-8 flex items-center justify-between sticky top-0 bg-background/80 backdrop-blur-xl z-20">
+        {/* Header */}
+        <header className="h-[80px] border-b border-border px-10 flex items-center justify-between sticky top-0 bg-background/80 backdrop-blur-3xl z-20">
           <div className="flex items-center gap-3 text-sm">
             <span className="text-text-secondary">Workspace</span>
             <ChevronDown className="w-3 h-3 text-white/20 -rotate-90" />
@@ -188,7 +188,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
-            className="w-full h-full p-8"
+            className="w-full h-full p-10 lg:p-12 max-w-[1600px] mx-auto"
           >
             {children}
           </motion.div>
