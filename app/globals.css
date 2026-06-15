@@ -33,29 +33,24 @@
   }
 
   .dark {
-    /* Sleek Glassmorphism Bento Grid */
-    --background: #040208;
-    --surface: #09080C;
-    --card: #09080C;
-    --border: rgba(255, 255, 255, 0.08);
-    --text-primary: #FFFFFF;
-    --text-secondary: rgba(255, 255, 255, 0.5);
-    --accent: #A855F7;
+    /* Sleek Interface (Dark Mode Default) */
+    --background: #070A13;
+    --surface: #0F1322;
+    --card: #161B30;
+    --border: rgba(255, 255, 255, 0.05); /* white/5 */
+    --text-primary: #F8FAFC;
+    --text-secondary: #94A3B8;
+    --accent: #3B82F6;
     --success: #10B981;
-    --warning: #FBBF24;
+    --warning: #F59E0B;
     --danger: #EF4444;
   }
 
   body {
     @apply bg-background text-text-primary font-sans antialiased;
-    background-image: 
-      radial-gradient(circle at 50% 0%, rgba(168, 85, 247, 0.05) 0%, transparent 60%),
-      radial-gradient(circle at 0% 50%, rgba(59, 130, 246, 0.03) 0%, transparent 50%),
-      radial-gradient(circle at 100% 100%, rgba(168, 85, 247, 0.03) 0%, transparent 50%);
-    background-attachment: fixed;
   }
 }
 
 .glass {
-  @apply bg-white/[0.02] backdrop-blur-3xl border border-white/[0.08];
+  @apply bg-surface/80 backdrop-blur-xl border border-border;
 }
