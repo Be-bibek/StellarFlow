@@ -26,6 +26,7 @@ pub enum TransactionStatus {
     StellarLedger,
     Settled,
     Failed,
+    PartialFailure,
 }
 
 /// Maps to the `wallet_type` PostgreSQL ENUM.
@@ -385,3 +386,147 @@ pub async fn get_recent_transactions(
     .await
 }
 
+// =============================================================================
+// Phase C.5 — Multi-Wallet Execution Models & Queries
+// =============================================================================
+
+/// Encrypted signing key record for a treasury wallet.
+/// Plaintext secret NEVER exists in this struct — only the AES-GCM blob.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct WalletSecret {
+    pub id:               Uuid,
+    pub wallet_id:        Uuid,
+    pub public_key:       String,
+    /// AES-256-GCM ciphertext: base64(nonce[12] || ciphertext+tag)
+    pub encrypted_secret: String,
+    pub created_at:       DateTime<Utc>,
+}
+
+/// Per-wallet child transaction produced by the JIT multi-wallet executor.
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct ChildTransfer {
+    pub id:                 Uuid,
+    pub parent_transfer_id: String,
+    pub wallet_id:          Uuid,
+    pub public_key:         String,
+    pub amount:             BigDecimal,
+    pub status:             TransactionStatus,
+    pub stellar_tx_hash:    Option<String>,
+    pub ledger_sequence:    Option<i64>,
+    pub failure_reason:     Option<String>,
+    pub created_at:         DateTime<Utc>,
+    pub settled_at:         Option<DateTime<Utc>>,
+    pub failed_at:          Option<DateTime<Utc>>,
+}
+
+/// Payload for creating a child transfer record.
+#[derive(Debug, Clone)]
+pub struct NewChildTransfer {
+    pub parent_transfer_id: String,
+    pub wallet_id:          Uuid,
+    pub public_key:         String,
+    pub amount:             BigDecimal,
+}
+
+/// Insert a child transfer in AUTHORIZING state.
+/// Returns the existing row if the UNIQUE(parent_transfer_id, wallet_id)
+/// constraint fires — enforcing idempotency at the DB layer.
+pub async fn insert_child_transfer(
+    pool: &PgPool,
+    child: &NewChildTransfer,
+) -> Result<ChildTransfer, sqlx::Error> {
+    sqlx::query_as::<_, ChildTransfer>(
+        r#"
+        INSERT INTO child_transfers (
+            parent_transfer_id, wallet_id, public_key, amount
+        )
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT ON CONSTRAINT uq_child_wallet_per_parent
+        DO UPDATE SET id = child_transfers.id  -- no-op update to trigger RETURNING
+        RETURNING
+            id, parent_transfer_id, wallet_id, public_key, amount,
+            status, stellar_tx_hash, ledger_sequence, failure_reason,
+            created_at, settled_at, failed_at
+        "#,
+    )
+    .bind(&child.parent_transfer_id)
+    .bind(child.wallet_id)
+    .bind(&child.public_key)
+    .bind(&child.amount)
+    .fetch_one(pool)
+    .await
+}
+
+/// Advance a child transfer to SETTLED or FAILED.
+pub async fn advance_child_status(
+    pool: &PgPool,
+    child_id: Uuid,
+    new_status: TransactionStatus,
+    stellar_tx_hash: Option<&str>,
+    ledger_sequence: Option<i64>,
+    failure_reason: Option<&str>,
+) -> Result<ChildTransfer, sqlx::Error> {
+    sqlx::query_as::<_, ChildTransfer>(
+        r#"
+        UPDATE child_transfers
+        SET
+            status          = $2,
+            stellar_tx_hash = COALESCE($3, stellar_tx_hash),
+            ledger_sequence = COALESCE($4, ledger_sequence),
+            failure_reason  = COALESCE($5, failure_reason),
+            settled_at      = CASE WHEN $2 = 'SETTLED'  THEN NOW() ELSE settled_at END,
+            failed_at       = CASE WHEN $2 = 'FAILED'   THEN NOW() ELSE failed_at END
+        WHERE id = $1
+        RETURNING
+            id, parent_transfer_id, wallet_id, public_key, amount,
+            status, stellar_tx_hash, ledger_sequence, failure_reason,
+            created_at, settled_at, failed_at
+        "#,
+    )
+    .bind(child_id)
+    .bind(new_status)
+    .bind(stellar_tx_hash)
+    .bind(ledger_sequence)
+    .bind(failure_reason)
+    .fetch_one(pool)
+    .await
+}
+
+/// Fetch all child transfers for a parent transfer (for idempotency check).
+pub async fn get_children_for_parent(
+    pool: &PgPool,
+    parent_transfer_id: &str,
+) -> Result<Vec<ChildTransfer>, sqlx::Error> {
+    sqlx::query_as::<_, ChildTransfer>(
+        r#"
+        SELECT
+            id, parent_transfer_id, wallet_id, public_key, amount,
+            status, stellar_tx_hash, ledger_sequence, failure_reason,
+            created_at, settled_at, failed_at
+        FROM child_transfers
+        WHERE parent_transfer_id = $1
+        ORDER BY created_at ASC
+        "#,
+    )
+    .bind(parent_transfer_id)
+    .fetch_all(pool)
+    .await
+}
+
+/// Load the AES-encrypted secret for a wallet by its Stellar public key.
+/// Returns None if no secret is registered for this public key.
+pub async fn find_wallet_secret_by_public_key(
+    pool: &PgPool,
+    public_key: &str,
+) -> Result<Option<WalletSecret>, sqlx::Error> {
+    sqlx::query_as::<_, WalletSecret>(
+        r#"
+        SELECT id, wallet_id, public_key, encrypted_secret, created_at
+        FROM wallet_secrets
+        WHERE public_key = $1
+        "#,
+    )
+    .bind(public_key)
+    .fetch_optional(pool)
+    .await
+}

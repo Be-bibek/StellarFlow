@@ -119,14 +119,17 @@ async fn main() -> anyhow::Result<()> {
 
     tracing::info!(max_connections = cfg.db_max_connections, "PostgreSQL pool established");
 
-    // Run pending migrations from the schema.sql file automatically.
-    // In production, use a dedicated migration tool (sqlx migrate, flyway, etc.)
-    // sqlx::migrate!("./src/database/migrations")
-    //     .run(&db_pool)
-    //     .await
-    //     .expect("Database migration failed");
+    // ── Phase C.5: Run idempotent migration before seeding ───────────────────
+    // This adds wallet_secrets, child_transfers tables and PARTIAL_FAILURE enum
+    // if they don't already exist. Safe to run on every startup.
+    let migration_sql = include_str!("database/migration_c5.sql");
+    if let Err(e) = sqlx::raw_sql(migration_sql).execute(&db_pool).await {
+        tracing::warn!(error = %e, "Phase C.5 migration warning (may already be applied)");
+    } else {
+        tracing::info!("Phase C.5 migration applied successfully.");
+    }
 
-    crate::database::seed::seed_database(&db_pool)
+    crate::database::seed::seed_database(&db_pool, &cfg.aes_encryption_key)
         .await
         .expect("Failed to seed database");
 
