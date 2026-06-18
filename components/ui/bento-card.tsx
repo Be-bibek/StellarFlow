@@ -1,61 +1,56 @@
-"use client";
+'use client';
 
-import { motion, HTMLMotionProps } from "motion/react";
-import { cn } from "@/lib/utils";
-import React, { useRef, useState } from "react";
+import { motion, HTMLMotionProps } from 'motion/react';
+import { useRef, useState, useEffect } from 'react';
+import { useTheme } from 'next-themes';
 
-export interface BentoCardProps extends HTMLMotionProps<"div"> {
+interface BentoCardProps extends HTMLMotionProps<"div"> {
+  children: React.ReactNode;
   delay?: number;
-  glass?: boolean;
-  children?: React.ReactNode;
+  className?: string;
+  noPadding?: boolean;
 }
 
-export function BentoCard({ className, delay = 0, glass = false, children, ...props }: BentoCardProps) {
+export function BentoCard({ children, delay = 0, className = '', noPadding = false, ...props }: BentoCardProps) {
   const divRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [opacity, setOpacity] = useState(0);
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect\n    setMounted(true);
+  }, []);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!divRef.current) return;
-
-    const div = divRef.current;
-    const rect = div.getBoundingClientRect();
-
+    const rect = divRef.current.getBoundingClientRect();
     setPosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
   };
 
-  const handleMouseEnter = () => {
-    setOpacity(1);
-  };
-
-  const handleMouseLeave = () => {
-    setOpacity(0);
-  };
+  const isDark = mounted && (resolvedTheme === 'dark' || resolvedTheme === undefined);
+  const spotlightColor = isDark ? 'rgba(139, 92, 246, 0.12)' : 'rgba(197, 160, 89, 0.07)';
 
   return (
     <motion.div
       ref={divRef}
+      initial={{ y: 20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ delay, duration: 0.5, ease: 'easeOut' }}
       onMouseMove={handleMouseMove}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1], delay }}
-      className={cn(
-        "relative flex flex-col overflow-hidden rounded-[24px] bg-card border border-border transition-all duration-300 shadow-xl dark:bg-[#09080C] dark:border-white/[0.08]",
-        glass && "bg-white/40 dark:bg-white/[0.02] backdrop-blur-3xl border-white/20 dark:border-white/10",
-        className
-      )}
+      onMouseEnter={() => setOpacity(1)}
+      onMouseLeave={() => setOpacity(0)}
+      className={`relative overflow-hidden rounded-xl border border-[rgba(212,163,89,0.15)] dark:border-[rgba(255,255,255,0.05)] bg-[#FFFFFF] dark:bg-[#0D0B14] backdrop-blur-[14px] saturate-120 dark:backdrop-blur-[16px] shadow-sm transition-colors duration-[450ms] ease-in-out ${className}`}
       {...props}
     >
       <div
-        className="pointer-events-none absolute -inset-px opacity-0 transition duration-300 z-0 rounded-[24px]"
+        className="pointer-events-none absolute -inset-px transition-opacity duration-300 z-0"
         style={{
           opacity,
-          background: `radial-gradient(600px circle at ${position.x}px ${position.y}px, var(--card-flare), transparent 40%)`,
+          background: `radial-gradient(600px circle at ${position.x}px ${position.y}px, ${spotlightColor}, transparent 40%)`,
         }}
       />
-      <div className="relative z-10 flex flex-col flex-1 h-full">
+      <div className={`relative z-10 h-full ${noPadding ? '' : 'p-4 md:p-6'}`}>
         {children}
       </div>
     </motion.div>

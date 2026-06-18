@@ -1,63 +1,65 @@
 @import "tailwindcss";
-@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
 
 @theme {
-  --color-background: var(--background);
-  --color-surface: var(--surface);
-  --color-card: var(--card);
-  --color-border: var(--border);
-  --color-text-primary: var(--text-primary);
-  --color-text-secondary: var(--text-secondary);
-  --color-accent: var(--accent);
-  --color-success: var(--success);
-  --color-warning: var(--warning);
-  --color-danger: var(--danger);
+  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, monospace;
 
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-mono);
+  /* Universal Custom Classes */
+  --color-canvas: #FDFDFB;
+  --color-dark-canvas: #040208;
+  --color-primary: #1A150E;
+  --color-dark-primary: #F8FAFC;
+
+  /* Premium White-Gold Theme Mappings */
+  --color-slate-900: #1A150E;
+  --color-slate-800: color-mix(in srgb, #1A150E 90%, transparent);
+  --color-slate-700: color-mix(in srgb, #1A150E 80%, transparent);
+  --color-slate-500: #8C7E6B;
+  --color-slate-400: color-mix(in srgb, #8C7E6B 70%, transparent);
+  
+  --color-blue-800: color-mix(in srgb, #C5A059 80%, transparent);
+  --color-blue-700: color-mix(in srgb, #C5A059 90%, black);
+  --color-blue-600: #C5A059;
+  --color-blue-500: #C5A059;
+  --color-blue-200: rgba(197, 160, 89, 0.2);
+  --color-blue-100: rgba(245, 158, 11, 0.2);
+  --color-blue-50: rgba(245, 158, 11, 0.1);
+  
+  --color-slate-300: rgba(212, 163, 89, 0.3);
+  --color-slate-200: rgba(212, 163, 89, 0.15); /* border matte gold rim */
+  
+  --color-slate-100: rgba(255, 255, 255, 0.8);
+  --color-slate-50: #FFFFFF; /* Pure pristine white enamel */
+
+  --color-emerald-600: #0F766E;
+  --color-emerald-200: rgba(15, 118, 110, 0.2);
+  --color-emerald-50: rgba(15, 118, 110, 0.1);
+
+  --color-red-600: #B91C1C;
+  --color-red-200: rgba(185, 28, 28, 0.2);
+  --color-red-50: rgba(185, 28, 28, 0.1);
 }
 
-@layer base {
-  :root {
-    /* Light Mode */
-    --background: #F8FAFC;
-    --surface: #FFFFFF;
-    --card: #F1F5F9;
-    --border: rgba(15, 23, 42, 0.08); /* 8% opacity */
-    --text-primary: #0F172A;
-    --text-secondary: #64748B;
-    --accent: #2563EB;
-    --success: #059669;
-    --warning: #D97706;
-    --danger: #DC2626;
-    --card-flare: rgba(0, 0, 0, 0.03);
-  }
-
-  .dark {
-    /* Sleek Glassmorphism Bento Grid */
-    --background: #040208;
-    --surface: #09080C;
-    --card: #09080C;
-    --border: rgba(255, 255, 255, 0.08);
-    --text-primary: #FFFFFF;
-    --text-secondary: rgba(255, 255, 255, 0.5);
-    --accent: #A855F7;
-    --success: #10B981;
-    --warning: #FBBF24;
-    --danger: #EF4444;
-    --card-flare: rgba(255, 255, 255, 0.06);
-  }
-
-  body {
-    @apply bg-background text-text-primary font-sans antialiased;
-    background-image: 
-      radial-gradient(circle at 50% 0%, rgba(168, 85, 247, 0.05) 0%, transparent 60%),
-      radial-gradient(circle at 0% 50%, rgba(59, 130, 246, 0.03) 0%, transparent 50%),
-      radial-gradient(circle at 100% 100%, rgba(168, 85, 247, 0.03) 0%, transparent 50%);
-    background-attachment: fixed;
+@layer utilities {
+  .glass-panel {
+    @apply bg-white/[0.03] backdrop-blur-xl border border-white/[0.08];
   }
 }
 
-.glass {
-  @apply bg-black/5 dark:bg-white/[0.02] backdrop-blur-3xl border border-black/5 dark:border-white/[0.08];
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
