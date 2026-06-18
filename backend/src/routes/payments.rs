@@ -353,15 +353,16 @@ pub async fn handle_batch_payout(
     );
 
     // ── Retrieve org contract address for simulation ─────────────────────────
-    let org = sqlx::query!(
-        "SELECT contract_address FROM organizations WHERE id = $1",
-        req.org_id
+    let contract_id_opt: Option<Option<String>> = sqlx::query_scalar(
+        "SELECT contract_address FROM organizations WHERE id = $1"
     )
+    .bind(req.org_id)
     .fetch_optional(&state.db)
-    .await?
-    .ok_or_else(|| AppError::NotFound(format!("Organization {}", req.org_id)))?;
+    .await?;
 
-    let contract_id = org.contract_address.unwrap_or_default();
+    let contract_id = contract_id_opt
+        .ok_or_else(|| AppError::NotFound(format!("Organization {}", req.org_id)))?
+        .unwrap_or_default();
 
     // ── Stage + Simulate all recipients ─────────────────────────────────────
     let mut jobs: Vec<BroadcastJob>       = Vec::with_capacity(req.recipients.len());
@@ -509,21 +510,20 @@ pub async fn get_payment_status(
     State(state): State<Arc<AppState>>,
     axum::extract::Path(transfer_id): axum::extract::Path<String>,
 ) -> ApiResult<impl IntoResponse> {
-    let tx = sqlx::query_as!(
-        crate::database::models::Transaction,
+    let tx = sqlx::query_as::<_, crate::database::models::Transaction>(
         r#"
         SELECT
             id, transfer_id, org_id, amount, asset_code, destination,
-            source_breakdown, status AS "status: TransactionStatus",
+            source_breakdown, status,
             stellar_tx_hash, ledger_sequence, soroban_event_id,
             batch_id, recipient_count, fee_stroops,
             created_at, routing_at, submitted_at, settled_at,
             failed_at, failure_reason
         FROM transactions
         WHERE transfer_id = $1
-        "#,
-        transfer_id
+        "#
     )
+    .bind(&transfer_id)
     .fetch_optional(&state.db)
     .await?
     .ok_or_else(|| AppError::NotFound(format!("Transaction {transfer_id}")))?;

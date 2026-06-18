@@ -307,7 +307,7 @@ fn parse_soroban_event(raw: &serde_json::Value) -> Option<TransitEvent> {
 
 /// Write a summary of the parsed event into PostgreSQL for audit purposes.
 async fn persist_event_audit(state: &Arc<AppState>, event: &TransitEvent) {
-    if let Err(e) = sqlx::query!(
+    if let Err(e) = sqlx::query(
         r#"
         UPDATE transactions
         SET soroban_event_id = $2,
@@ -319,11 +319,11 @@ async fn persist_event_audit(state: &Arc<AppState>, event: &TransitEvent) {
                 ELSE status
             END
         WHERE transfer_id = $1
-        "#,
-        event.ref_id,
-        format!("soroban:{}:{}", event.timestamp, event.ref_id),
-        event.new_status.clone().unwrap_or_default(),
+        "#
     )
+    .bind(&event.ref_id)
+    .bind(format!("soroban:{}:{}", event.timestamp, event.ref_id))
+    .bind(event.new_status.clone().unwrap_or_default())
     .execute(&state.db)
     .await
     {

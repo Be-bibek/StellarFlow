@@ -1,0 +1,22 @@
+# =============================================================================
+# StellarFlow — Cargo Build Configuration
+#
+# Purpose: Accelerate incremental compilation across the workspace.
+# Cold build for stellar-xdr + sqlx + axum + tokio can reach 4-8 min on
+# consumer hardware without these flags.
+# =============================================================================
+
+[build]
+# Windows (MSVC toolchain): disable incremental linking which can cause
+# stale symbol issues with proc-macro heavy crates like sqlx.
+# Linux / WSL alternative:
+#   rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+# macOS alternative:
+#   rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+rustflags = ["-C", "link-arg=/INCREMENTAL:NO"]
+
+# ── Optional: sccache distributed compilation cache ───────────────────────────
+# Install with: cargo install sccache
+# Then uncomment the line below for CI / multi-developer teams.
+# [env]
+# RUSTC_WRAPPER = "sccache"

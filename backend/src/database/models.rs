@@ -221,8 +221,7 @@ pub async fn insert_transaction(
     pool: &PgPool,
     tx: &NewTransaction,
 ) -> Result<Transaction, sqlx::Error> {
-    sqlx::query_as!(
-        Transaction,
+    sqlx::query_as::<_, Transaction>(
         r#"
         INSERT INTO transactions (
             transfer_id, org_id, amount, asset_code,
@@ -231,21 +230,21 @@ pub async fn insert_transaction(
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING
             id, transfer_id, org_id, amount, asset_code, destination,
-            source_breakdown, status AS "status: TransactionStatus",
+            source_breakdown, status,
             stellar_tx_hash, ledger_sequence, soroban_event_id,
             batch_id, recipient_count, fee_stroops,
             created_at, routing_at, submitted_at, settled_at,
             failed_at, failure_reason
         "#,
-        tx.transfer_id,
-        tx.org_id,
-        tx.amount,
-        tx.asset_code,
-        tx.destination,
-        tx.source_breakdown,
-        tx.batch_id,
-        tx.recipient_count,
     )
+    .bind(&tx.transfer_id)
+    .bind(tx.org_id)
+    .bind(&tx.amount)
+    .bind(&tx.asset_code)
+    .bind(&tx.destination)
+    .bind(&tx.source_breakdown)
+    .bind(tx.batch_id)
+    .bind(tx.recipient_count)
     .fetch_one(pool)
     .await
 }
@@ -258,8 +257,7 @@ pub async fn advance_transaction_status(
     stellar_tx_hash: Option<&str>,
     ledger_sequence: Option<i64>,
 ) -> Result<Transaction, sqlx::Error> {
-    sqlx::query_as!(
-        Transaction,
+    sqlx::query_as::<_, Transaction>(
         r#"
         UPDATE transactions
         SET
@@ -273,17 +271,17 @@ pub async fn advance_transaction_status(
         WHERE transfer_id = $1
         RETURNING
             id, transfer_id, org_id, amount, asset_code, destination,
-            source_breakdown, status AS "status: TransactionStatus",
+            source_breakdown, status,
             stellar_tx_hash, ledger_sequence, soroban_event_id,
             batch_id, recipient_count, fee_stroops,
             created_at, routing_at, submitted_at, settled_at,
             failed_at, failure_reason
         "#,
-        transfer_id,
-        new_status as TransactionStatus,
-        stellar_tx_hash,
-        ledger_sequence,
     )
+    .bind(transfer_id)
+    .bind(new_status as TransactionStatus)
+    .bind(stellar_tx_hash)
+    .bind(ledger_sequence)
     .fetch_one(pool)
     .await
 }
@@ -293,8 +291,7 @@ pub async fn acquire_channel_account(
     pool: &PgPool,
     batch_id: Uuid,
 ) -> Result<Option<ChannelAccount>, sqlx::Error> {
-    sqlx::query_as!(
-        ChannelAccount,
+    sqlx::query_as::<_, ChannelAccount>(
         r#"
         UPDATE channel_accounts
         SET
@@ -311,8 +308,8 @@ pub async fn acquire_channel_account(
         RETURNING id, public_key, encrypted_secret, is_locked,
                   locked_at, locked_by_batch, last_sequence, created_at
         "#,
-        batch_id,
     )
+    .bind(batch_id)
     .fetch_optional(pool)
     .await
 }
@@ -323,7 +320,7 @@ pub async fn release_channel_account(
     channel_id: Uuid,
     new_sequence: i64,
 ) -> Result<(), sqlx::Error> {
-    sqlx::query!(
+    sqlx::query(
         r#"
         UPDATE channel_accounts
         SET
@@ -333,10 +330,58 @@ pub async fn release_channel_account(
             last_sequence   = $2
         WHERE id = $1
         "#,
-        channel_id,
-        new_sequence,
     )
+    .bind(channel_id)
+    .bind(new_sequence)
     .execute(pool)
     .await
     .map(|_| ())
 }
+
+/// Get all active wallets for an organization.
+pub async fn get_wallets_for_org(
+    pool: &PgPool,
+    org_id: Uuid,
+) -> Result<Vec<Wallet>, sqlx::Error> {
+    sqlx::query_as::<_, Wallet>(
+        r#"
+        SELECT id, org_id, wallet_name, public_key, 
+               wallet_type, 
+               description, is_active, registered_at, updated_at
+        FROM wallets
+        WHERE org_id = $1 AND is_active = TRUE
+        ORDER BY registered_at ASC
+        "#,
+    )
+    .bind(org_id)
+    .fetch_all(pool)
+    .await
+}
+
+/// Get recent transactions for an organization.
+pub async fn get_recent_transactions(
+    pool: &PgPool,
+    org_id: Uuid,
+    limit: i64,
+) -> Result<Vec<Transaction>, sqlx::Error> {
+    sqlx::query_as::<_, Transaction>(
+        r#"
+        SELECT 
+            id, transfer_id, org_id, amount, asset_code, destination,
+            source_breakdown, status,
+            stellar_tx_hash, ledger_sequence, soroban_event_id,
+            batch_id, recipient_count, fee_stroops,
+            created_at, routing_at, submitted_at, settled_at,
+            failed_at, failure_reason
+        FROM transactions
+        WHERE org_id = $1
+        ORDER BY created_at DESC
+        LIMIT $2
+        "#,
+    )
+    .bind(org_id)
+    .bind(limit)
+    .fetch_all(pool)
+    .await
+}
+

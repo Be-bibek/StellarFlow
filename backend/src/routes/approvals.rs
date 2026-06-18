@@ -276,7 +276,7 @@ pub async fn create_pending_approval(
 
     // ── Persist XDR in Redis with TTL ────────────────────────────────────────
     {
-        let mut conn = state.redis.get_async_connection().await.map_err(|e| {
+        let mut conn = state.redis.get_multiplexed_async_connection().await.map_err(|e| {
             AppError::Cache(e.to_string())
         })?;
 
@@ -291,8 +291,7 @@ pub async fn create_pending_approval(
     }
 
     // ── Create durable audit record in PostgreSQL ─────────────────────────────
-    let approval = sqlx::query_as!(
-        ApprovalRequest,
+    let approval = sqlx::query_as::<_, ApprovalRequest>(
         r#"
         INSERT INTO approval_requests (
             id, redis_key, org_id, purpose, amount, destination,
@@ -302,18 +301,18 @@ pub async fn create_pending_approval(
         RETURNING
             id, redis_key, org_id, purpose, amount, destination,
             required_signatures, current_signatures,
-            status AS "status: ApprovalStatus",
+            status,
             submitted_tx_hash, expires_at, created_at, updated_at
-        "#,
-        approval_id,
-        redis_key,
-        req.org_id,
-        req.purpose,
-        amount_dec,
-        req.destination,
-        req.required_signatures,
-        expires_at,
+        "#
     )
+    .bind(approval_id)
+    .bind(&redis_key)
+    .bind(req.org_id)
+    .bind(&req.purpose)
+    .bind(amount_dec)
+    .bind(&req.destination)
+    .bind(req.required_signatures)
+    .bind(expires_at)
     .fetch_one(&state.db)
     .await?;
 
@@ -366,20 +365,19 @@ pub async fn submit_signature(
     Json(req): Json<SubmitSignatureRequest>,
 ) -> ApiResult<impl IntoResponse> {
     // ── Fetch current approval state from DB ─────────────────────────────────
-    let approval = sqlx::query_as!(
-        ApprovalRequest,
+    let approval = sqlx::query_as::<_, ApprovalRequest>(
         r#"
         SELECT
             id, redis_key, org_id, purpose, amount, destination,
             required_signatures, current_signatures,
-            status AS "status: ApprovalStatus",
+            status,
             submitted_tx_hash, expires_at, created_at, updated_at
         FROM approval_requests
         WHERE id = $1
         FOR UPDATE
-        "#,
-        req.approval_id
+        "#
     )
+    .bind(req.approval_id)
     .fetch_optional(&state.db)
     .await?
     .ok_or_else(|| AppError::NotFound(format!("Approval {}", req.approval_id)))?;
@@ -401,7 +399,7 @@ pub async fn submit_signature(
 
     // ── Fetch live XDR from Redis ─────────────────────────────────────────────
     let current_xdr: String = {
-        let mut conn = state.redis.get_async_connection().await.map_err(|e| {
+        let mut conn = state.redis.get_multiplexed_async_connection().await.map_err(|e| {
             AppError::Cache(e.to_string())
         })?;
 
@@ -427,7 +425,7 @@ pub async fn submit_signature(
 
     // ── Persist updated XDR back into Redis (preserve remaining TTL) ──────────
     {
-        let mut conn = state.redis.get_async_connection().await.map_err(|e| {
+        let mut conn = state.redis.get_multiplexed_async_connection().await.map_err(|e| {
             AppError::Cache(e.to_string())
         })?;
 
@@ -442,16 +440,16 @@ pub async fn submit_signature(
     }
 
     // ── Record signature in PostgreSQL (UNIQUE guard prevents double-signing) ──
-    sqlx::query!(
+    sqlx::query(
         r#"
         INSERT INTO approval_signatures (approval_id, signer_address, signature_b64, hint_hex)
         VALUES ($1, $2, $3, $4)
-        "#,
-        req.approval_id,
-        req.signer_address,
-        req.signature_b64,
-        req.hint_hex,
+        "#
     )
+    .bind(req.approval_id)
+    .bind(&req.signer_address)
+    .bind(&req.signature_b64)
+    .bind(&req.hint_hex)
     .execute(&state.db)
     .await
     .map_err(|e| {
@@ -468,8 +466,7 @@ pub async fn submit_signature(
     })?;
 
     // ── Atomically increment signature counter ────────────────────────────────
-    let updated = sqlx::query_as!(
-        ApprovalRequest,
+    let updated = sqlx::query_as::<_, ApprovalRequest>(
         r#"
         UPDATE approval_requests
         SET current_signatures = current_signatures + 1
@@ -477,11 +474,11 @@ pub async fn submit_signature(
         RETURNING
             id, redis_key, org_id, purpose, amount, destination,
             required_signatures, current_signatures,
-            status AS "status: ApprovalStatus",
+            status,
             submitted_tx_hash, expires_at, created_at, updated_at
-        "#,
-        req.approval_id
+        "#
     )
+    .bind(req.approval_id)
     .fetch_one(&state.db)
     .await?;
 
@@ -505,10 +502,10 @@ pub async fn submit_signature(
         );
 
         // Mark as THRESHOLD_MET first (before network call).
-        sqlx::query!(
-            "UPDATE approval_requests SET status = 'THRESHOLD_MET' WHERE id = $1",
-            req.approval_id
+        sqlx::query(
+            "UPDATE approval_requests SET status = 'THRESHOLD_MET' WHERE id = $1"
         )
+        .bind(req.approval_id)
         .execute(&state.db)
         .await?;
 
@@ -525,15 +522,15 @@ pub async fn submit_signature(
                 submitted_tx_hash = Some(tx_hash.clone());
 
                 // Update DB: SUBMITTED + store tx hash.
-                sqlx::query!(
+                sqlx::query(
                     r#"
                     UPDATE approval_requests
                     SET status = 'SUBMITTED', submitted_tx_hash = $2
                     WHERE id = $1
-                    "#,
-                    req.approval_id,
-                    tx_hash,
+                    "#
                 )
+                .bind(req.approval_id)
+                .bind(&tx_hash)
                 .execute(&state.db)
                 .await?;
 
@@ -559,10 +556,10 @@ pub async fn submit_signature(
                     "Horizon submission failed after quorum"
                 );
 
-                sqlx::query!(
-                    "UPDATE approval_requests SET status = 'REJECTED' WHERE id = $1",
-                    req.approval_id
+                sqlx::query(
+                    "UPDATE approval_requests SET status = 'REJECTED' WHERE id = $1"
                 )
+                .bind(req.approval_id)
                 .execute(&state.db)
                 .await?;
 
@@ -613,33 +610,31 @@ pub async fn get_approval_detail(
     State(state): State<Arc<AppState>>,
     Path(approval_id): Path<Uuid>,
 ) -> ApiResult<impl IntoResponse> {
-    let approval = sqlx::query_as!(
-        ApprovalRequest,
+    let approval = sqlx::query_as::<_, ApprovalRequest>(
         r#"
         SELECT
             id, redis_key, org_id, purpose, amount, destination,
             required_signatures, current_signatures,
-            status AS "status: ApprovalStatus",
+            status,
             submitted_tx_hash, expires_at, created_at, updated_at
         FROM approval_requests
         WHERE id = $1
-        "#,
-        approval_id
+        "#
     )
+    .bind(approval_id)
     .fetch_optional(&state.db)
     .await?
     .ok_or_else(|| AppError::NotFound(format!("Approval {approval_id}")))?;
 
-    let signatures = sqlx::query_as!(
-        ApprovalSignature,
+    let signatures = sqlx::query_as::<_, ApprovalSignature>(
         r#"
         SELECT id, approval_id, signer_address, signature_b64, hint_hex, signed_at
         FROM approval_signatures
         WHERE approval_id = $1
         ORDER BY signed_at ASC
-        "#,
-        approval_id
+        "#
     )
+    .bind(approval_id)
     .fetch_all(&state.db)
     .await?;
 

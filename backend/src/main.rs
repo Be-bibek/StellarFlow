@@ -12,9 +12,12 @@
 //   8. Bind and serve with graceful shutdown on SIGTERM/SIGINT.
 // =============================================================================
 
+mod auth;
+mod config;
 mod database;
 mod errors;
 mod routes;
+mod stellar;
 mod streaming;
 
 use std::sync::Arc;
@@ -35,6 +38,9 @@ use crate::{
     routes::{
         approvals::{create_pending_approval, get_approval_detail, submit_signature},
         payments::{get_payment_status, handle_batch_payout},
+        wallets::get_wallets,
+        transactions::get_transactions,
+        jit::{simulate_jit, execute_jit},
     },
     streaming::transit_engine::{soroban_event_poller, ws_gateway_handler},
 };
@@ -48,17 +54,29 @@ use crate::{
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Application-wide shared state injected into every route handler.
+///
+/// All fields are `Clone` (backed by `Arc` or `Clone`-safe wrappers) so Axum
+/// can hand a cheap clone to every concurrent request handler.
 #[derive(Clone)]
 pub struct AppState {
-    /// SQLx async connection pool — max 50 connections by default.
+    /// SQLx async connection pool — max `config.db_max_connections` connections.
     pub db: sqlx::PgPool,
 
-    /// Redis connection manager (auto-reconnects on disconnect).
+    /// Redis connection manager (auto-reconnects on network partition).
+    /// Wraps the client — callers must call `.get_connection_manager()` to obtain
+    /// an async connection.
     pub redis: redis::Client,
 
     /// Global broadcast channel for WebSocket event fanout.
-    /// Sender is held in AppState; each WS connection subscribes a Receiver.
+    /// Sender is held in AppState; each WS handler subscribes a fresh Receiver.
     pub broadcast_tx: broadcast::Sender<serde_json::Value>,
+
+    /// Shared Horizon REST client — reqwest-backed, clone-safe (Arc inside).
+    /// Replaces the removed stellar-horizon crate (Risk-2 mitigation).
+    pub horizon: stellar::HorizonClient,
+
+    /// Fully-typed application configuration loaded from environment.
+    pub config: config::Config,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -67,8 +85,12 @@ pub struct AppState {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // ── 1. Load .env configuration ────────────────────────────────────────────
-    dotenvy::dotenv().ok();
+    // ── 1. Load typed configuration from environment ───────────────────────────
+    // Config::from_env() calls dotenvy::dotenv() internally — no need to call
+    // it again. All env var access for the lifetime of the process goes through
+    // this single Config value.
+    let cfg = config::Config::from_env()
+        .expect("Failed to load application configuration — check .env or environment");
 
     // ── 2. Initialise structured tracing ─────────────────────────────────────
     // RUST_LOG controls the log level filter. Defaults to `info`.
@@ -80,25 +102,22 @@ async fn main() -> anyhow::Result<()> {
         .with(tracing_subscriber::fmt::layer().pretty())
         .init();
 
-    tracing::info!("StellarFlow Backend starting up...");
+    tracing::info!(
+        version     = env!("CARGO_PKG_VERSION"),
+        network     = if cfg.is_testnet() { "TESTNET" } else { "MAINNET" },
+        horizon_url = %cfg.stellar_horizon_url,
+        "StellarFlow Backend starting up"
+    );
 
     // ── 3. PostgreSQL connection pool ─────────────────────────────────────────
-    let database_url = std::env::var("DATABASE_URL")
-        .expect("DATABASE_URL must be set in environment or .env file");
-
-    let max_connections: u32 = std::env::var("DB_MAX_CONNECTIONS")
-        .ok()
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(50);
-
     let db_pool = PgPoolOptions::new()
-        .max_connections(max_connections)
-        .acquire_timeout(std::time::Duration::from_secs(10))
-        .connect(&database_url)
+        .max_connections(cfg.db_max_connections)
+        .acquire_timeout(std::time::Duration::from_secs(cfg.db_acquire_timeout_secs))
+        .connect(&cfg.database_url)
         .await
         .expect("Failed to connect to PostgreSQL");
 
-    tracing::info!(max_connections, "PostgreSQL pool established");
+    tracing::info!(max_connections = cfg.db_max_connections, "PostgreSQL pool established");
 
     // Run pending migrations from the schema.sql file automatically.
     // In production, use a dedicated migration tool (sqlx migrate, flyway, etc.)
@@ -107,17 +126,19 @@ async fn main() -> anyhow::Result<()> {
     //     .await
     //     .expect("Database migration failed");
 
-    // ── 4. Redis connection manager ───────────────────────────────────────────
-    let redis_url = std::env::var("REDIS_URL")
-        .unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+    crate::database::seed::seed_database(&db_pool)
+        .await
+        .expect("Failed to seed database");
 
-    let redis_client = redis::Client::open(redis_url.as_str())
+
+    // ── 4. Redis connection manager ───────────────────────────────────────────
+    let redis_client = redis::Client::open(cfg.redis_url.as_str())
         .expect("Failed to create Redis client");
 
-    // Validate Redis connection at startup.
+    // Validate Redis connection at startup — fail fast if Redis is unreachable.
     {
         let mut conn = redis_client
-            .get_async_connection()
+            .get_multiplexed_async_connection()
             .await
             .expect("Cannot connect to Redis — is it running?");
         let _pong: String = redis::cmd("PING")
@@ -126,29 +147,42 @@ async fn main() -> anyhow::Result<()> {
             .expect("Redis PING failed");
     }
 
-    tracing::info!(redis_url = %redis_url, "Redis connection established");
+    tracing::info!(redis_url = %cfg.redis_url, "Redis connection established");
 
-    // ── 5. Broadcast channel (capacity: 1024 buffered events) ─────────────────
-    // Lagging receivers will miss old events — acceptable for real-time UI.
-    let (broadcast_tx, _) = broadcast::channel::<serde_json::Value>(1024);
+    // ── 5. Horizon REST client ────────────────────────────────────────────────
+    // Replaces the removed stellar-horizon crate (Risk-2 mitigation).
+    let horizon = stellar::HorizonClient::new(cfg.stellar_horizon_url.clone());
+    tracing::info!(horizon_url = %cfg.stellar_horizon_url, "Horizon client initialised");
 
-    // ── 6. Build shared state ─────────────────────────────────────────────────
+    // ── 6. Broadcast channel ──────────────────────────────────────────────────
+    // Capacity set from config (default: 1024). Slow consumers receive
+    // RecvError::Lagged(n) — handled in ws_gateway_handler with RESYNC event.
+    let (broadcast_tx, _) =
+        broadcast::channel::<serde_json::Value>(cfg.broadcast_channel_capacity);
+
+    // ── 7. Build shared state ─────────────────────────────────────────────────
     let state = Arc::new(AppState {
-        db: db_pool,
-        redis: redis_client,
+        db:           db_pool,
+        redis:        redis_client,
         broadcast_tx: broadcast_tx.clone(),
+        horizon,
+        config:       cfg.clone(),
     });
 
-    // ── 7. Spawn Soroban event poller ─────────────────────────────────────────
+    // ── 8. Spawn background workers ────────────────────────────────────────────
     {
+        // Soroban ledger event poller (polls every `soroban_poll_interval_secs`).
         let poller_state = Arc::clone(&state);
         tokio::spawn(async move {
             soroban_event_poller(poller_state).await;
         });
         tracing::info!("Soroban event poller spawned");
+
+        // TODO (P2): Spawn channel_heartbeat::sweep_stale_locks worker.
+        // TODO (P2): Spawn approval expiry sweeper worker.
     }
 
-    // ── 8. Build Axum router ──────────────────────────────────────────────────
+    // ── 9. Build Axum router ──────────────────────────────────────────────────
     let cors = CorsLayer::new()
         .allow_origin(Any)
         .allow_methods(Any)
@@ -161,7 +195,14 @@ async fn main() -> anyhow::Result<()> {
         // Approval routes
         .route("/approvals/pending",            post(create_pending_approval))
         .route("/approvals/sign",               post(submit_signature))
-        .route("/approvals/:approval_id",       get(get_approval_detail));
+        .route("/approvals/:approval_id",       get(get_approval_detail))
+        // Wallets
+        .route("/wallets",                      get(get_wallets))
+        // Transactions
+        .route("/transactions",                 get(get_transactions))
+        // JIT
+        .route("/jit/simulate",                 post(simulate_jit))
+        .route("/jit/execute",                  post(execute_jit));
 
     let app = Router::new()
         // REST API namespace
@@ -175,12 +216,11 @@ async fn main() -> anyhow::Result<()> {
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 
-    // ── 9. Bind and serve ─────────────────────────────────────────────────────
-    let bind_addr = std::env::var("BIND_ADDR").unwrap_or_else(|_| "0.0.0.0:8080".to_string());
-    let listener  = tokio::net::TcpListener::bind(&bind_addr).await?;
+    // ── 10. Bind and serve ────────────────────────────────────────────────────
+    let listener = tokio::net::TcpListener::bind(&cfg.bind_addr).await?;
 
     tracing::info!(
-        addr = %bind_addr,
+        addr = %cfg.bind_addr,
         "StellarFlow Backend listening — ready to accept connections"
     );
 
