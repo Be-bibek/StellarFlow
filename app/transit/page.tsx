@@ -31,7 +31,7 @@ export default function TransitCenterPage() {
         </div>
       </div>
 
-      <BentoCard delay={0.1} glass className="h-[600px] flex flex-col justify-center items-center relative overflow-hidden">
+      <BentoCard delay={0.1} className="h-[600px] flex flex-col justify-center items-center relative overflow-hidden">
         
         {/* Abstract Background Elements */}
         <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:32px_32px] opacity-100" />

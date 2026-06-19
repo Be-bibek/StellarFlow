@@ -26,6 +26,7 @@ export type TransactionStatus =
   | "ROUTING"
   | "STELLAR_LEDGER"
   | "SETTLED"
+  | "PARTIAL_FAILURE"
   | "FAILED";
 
 export interface SourceBreakdown {
@@ -92,6 +93,7 @@ const STAGE_DURATIONS: Record<TransactionStatus, number> = {
   STELLAR_LEDGER: 2500,
   SETTLED:        0,
   FAILED:         0,
+  PARTIAL_FAILURE: 0,
 };
 
 const STAGE_ORDER: TransactionStatus[] = [
@@ -324,7 +326,9 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
     if (get().wsConnected) return;
     
     // Connect to real backend WebSocket
-    const ws = new WebSocket('ws://localhost:8080/v1/transit/00000000-0000-0000-0000-000000000001');
+    const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+    const wsUrl = rawApiUrl.replace(/^http/, 'ws') + '/v1/transit/00000000-0000-0000-0000-000000000001';
+    const ws = new WebSocket(wsUrl);
     
     ws.onopen = () => set({ wsConnected: true });
     ws.onclose = () => {
@@ -349,7 +353,7 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
             set((state) => {
               if (state.activePipeline?.transferId === transferId) {
                 const now = Date.now();
-                const stages = state.activePipeline.stages.map(s => {
+                const stages = state.activePipeline!.stages.map(s => {
                   if (s.status === status) {
                     return { ...s, startedAt: now };
                   }
@@ -368,15 +372,16 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
                 
                 return {
                   activePipeline: {
-                    ...state.activePipeline,
+                    ...(state.activePipeline as TransitPipeline),
+                    transferId: state.activePipeline!.transferId,
                     currentStage: status,
                     stages,
-                    stellarHash: data.stellar_tx_hash || state.activePipeline.stellarHash,
-                    ledger: data.ledger_sequence || state.activePipeline.ledger,
+                    stellarHash: data.stellar_tx_hash || state.activePipeline!.stellarHash,
+                    ledger: data.ledger_sequence || state.activePipeline!.ledger,
                     completedAt: status === 'SETTLED' ? now : undefined
                   },
                   pipelineIsRunning: status !== 'SETTLED' && status !== 'FAILED'
-                };
+                } as Partial<TransactionState>;
               }
               return state;
             });

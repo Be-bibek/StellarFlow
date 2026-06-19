@@ -22,10 +22,13 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   transpilePackages: ['motion'],
   async rewrites() {
+    // In production on Vercel, API requests can be proxied to the external Railway backend
+    // Or you can skip rewrites entirely and use absolute URLs via NEXT_PUBLIC_API_URL in the frontend.
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8080';
     return [
       {
         source: '/api/:path*',
-        destination: 'http://127.0.0.1:8080/api/v1/:path*', // Proxy to Rust backend
+        destination: `${backendUrl.replace(/\/$/, '')}/api/v1/:path*`, // Proxy to Rust backend
       },
     ];
   },

@@ -12,11 +12,11 @@ use crate::database::models::{
 // Map of (wallet_name, public_key, wallet_type, env_var_name_for_secret)
 // env_var_name is read at seed time to load the signing secret.
 const WALLET_DEFS: &[(&str, &str, &str)] = &[
-    ("Master Treasury",  "GCSANGCZM2L4RRHYNQXTH57Q4NM7NU4SIGOF2TQJQ2HSP73W4KVBYILP", "MASTER_SECRET"),
-    ("Payroll Reserve",  "GBNY5IURZN5PEAVUKW6E4XIGVNDRKZFXOUUQEDZVIDN2XTFUWOBQCJFX", "PAYROLL_SECRET"),
-    ("Operations Budget","GAFZERMSJ6HZMWLU6ES434QY4RR76NVDK3E5LZUDSHLPCKCYXJWQDBZI", "OPERATIONS_SECRET"),
-    ("Emergency Reserve", "GD234Y6KAO4JDEYJUTGEDXXNOCAC6EKGJY7SSXODIQCTLER4CKD7SGES", "RESERVE_SECRET"),
-    ("Marketing Vault",  "GCU25EALXORTONN2B2UEIEAM4JLLU46KA3EBAX2D4RJOIWRZKZNWHMHM", "MARKETING_SECRET"),
+    ("Master Treasury",  "GATWXA5AROAPLEYNWFN6COAI4AK7NIQZAWA2FQMOO56IMJAQZEEWGZNA", "MASTER_SECRET"),
+    ("Payroll Reserve",  "GBDD4REIM3C4KJIPEVGQPKG6ZKYQDL26OICXPLHKLRTJOUUCTRMCROHL", "PAYROLL_SECRET"),
+    ("Operations Budget","GCD5N7VAHZPKWU3IDWJMA7AS2QWHBIYUSBVMKDB7WCRHXNBYOWPXDW3A", "OPERATIONS_SECRET"),
+    ("Emergency Reserve", "GDGQQFNBNBICF2NJQDZ6ZSBZ2NBWGBSDMERSUNMWMPV3B5773VMKAKTH", "RESERVE_SECRET"),
+    ("Marketing Vault",  "GB3QQEJPNHAL7ITZAN7DCOXBBM5Q7Q7SWJVFNUDYJTX7DLAAX5CITMRU", "MARKETING_SECRET"),
 ];
 
 const WALLET_TYPES: &[WalletType] = &[
@@ -171,13 +171,16 @@ pub async fn seed_wallet_secrets(pool: &PgPool, aes_key: &[u8; 32]) -> Result<()
     for (name, public_key, env_var) in WALLET_DEFS {
         // Read plaintext secret from environment variable.
         let secret = match std::env::var(env_var) {
-            Ok(s) if !s.is_empty() && !s.starts_with('S') == false => s,
-            Ok(_) | Err(_) => {
-                // Secret not configured — skip this wallet silently.
-                // The executor will fall back gracefully per-wallet.
+            Ok(s) if !s.is_empty() && s.starts_with('S') => s,
+            Ok(s) => {
+                tracing::warn!("Secret for {} does not start with S: {}", name, s);
+                continue;
+            }
+            Err(e) => {
                 tracing::warn!(
                     wallet = %name,
                     env_var = %env_var,
+                    error = %e,
                     "Wallet secret env var not set or invalid — skipping secret seed for this wallet."
                 );
                 skipped += 1;

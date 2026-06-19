@@ -41,6 +41,10 @@ use crate::{
         wallets::get_wallets,
         transactions::get_transactions,
         jit::{simulate_jit, execute_jit},
+        governance::{
+            request_approval, approve_request, reject_request,
+            list_pending, list_history, get_audit_logs,
+        },
     },
     streaming::transit_engine::{soroban_event_poller, ws_gateway_handler},
 };
@@ -92,6 +96,8 @@ async fn main() -> anyhow::Result<()> {
     let cfg = config::Config::from_env()
         .expect("Failed to load application configuration — check .env or environment");
 
+    println!("DEBUG IN MAIN: MASTER_SECRET={:?}", std::env::var("MASTER_SECRET"));
+
     // ── 2. Initialise structured tracing ─────────────────────────────────────
     // RUST_LOG controls the log level filter. Defaults to `info`.
     // In production, set RUST_LOG=stellarflow_backend=info,tower_http=warn.
@@ -127,6 +133,14 @@ async fn main() -> anyhow::Result<()> {
         tracing::warn!(error = %e, "Phase C.5 migration warning (may already be applied)");
     } else {
         tracing::info!("Phase C.5 migration applied successfully.");
+    }
+
+    // ── Phase E: Run governance layer migration ────────────────────────────────
+    let migration_e_sql = include_str!("database/migration_e.sql");
+    if let Err(e) = sqlx::raw_sql(migration_e_sql).execute(&db_pool).await {
+        tracing::warn!(error = %e, "Phase E migration warning (may already be applied)");
+    } else {
+        tracing::info!("Phase E governance migration applied successfully.");
     }
 
     crate::database::seed::seed_database(&db_pool, &cfg.aes_encryption_key)
@@ -195,7 +209,7 @@ async fn main() -> anyhow::Result<()> {
         // Payment routes
         .route("/payments/batch",              post(handle_batch_payout))
         .route("/payments/status/:transfer_id", get(get_payment_status))
-        // Approval routes
+        // Legacy multi-sig approval routes (Phase B — untouched, backward compat)
         .route("/approvals/pending",            post(create_pending_approval))
         .route("/approvals/sign",               post(submit_signature))
         .route("/approvals/:approval_id",       get(get_approval_detail))
@@ -205,7 +219,14 @@ async fn main() -> anyhow::Result<()> {
         .route("/transactions",                 get(get_transactions))
         // JIT
         .route("/jit/simulate",                 post(simulate_jit))
-        .route("/jit/execute",                  post(execute_jit));
+        .route("/jit/execute",                  post(execute_jit))
+        // Phase E — Governance Layer (new routes, separate namespace)
+        .route("/gov/approvals/request",         post(request_approval))
+        .route("/gov/approvals/pending",          get(list_pending))
+        .route("/gov/approvals/history",          get(list_history))
+        .route("/gov/approvals/:id/approve",      post(approve_request))
+        .route("/gov/approvals/:id/reject",       post(reject_request))
+        .route("/gov/audit/logs",                 get(get_audit_logs));
 
     let app = Router::new()
         // REST API namespace

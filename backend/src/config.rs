@@ -111,7 +111,7 @@ impl Config {
 
         Ok(Config {
             // ── Server ────────────────────────────────────────────────────────
-            bind_addr: env_str("BIND_ADDR", "0.0.0.0:8080"),
+            bind_addr: env_str("BIND_ADDR", &format!("0.0.0.0:{}", env_str("PORT", "8080"))),
 
             // ── PostgreSQL ────────────────────────────────────────────────────
             database_url: require_str("DATABASE_URL")

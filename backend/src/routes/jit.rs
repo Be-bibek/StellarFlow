@@ -48,26 +48,32 @@ pub struct SimulateJitRequest {
 #[allow(non_snake_case)]
 #[derive(Debug, Serialize)]
 pub struct JitAllocationDto {
-    pub walletId: String,
-    pub walletName: String,
-    pub walletType: String,
-    pub publicKey: String,
-    pub amount: f64,
-    pub percentage: f64,
-    pub available: f64,
-    pub rawBalance: f64,
+    pub walletId:           String,
+    pub walletName:         String,
+    pub walletType:         String,
+    pub publicKey:          String,
+    pub amount:             f64,
+    pub percentage:         f64,
+    // ── Liquidity breakdown (new in v2) ──────────────────────────────────
+    pub rawBalance:         f64,
+    pub stellarBaseReserve: f64,
+    pub feeBuffer:          f64,
+    pub reserveBuffer:      f64,
+    pub usableLiquidity:    f64,
+    pub liquidityState:     String,
+    pub exclusionReason:    Option<String>,
 }
 
 #[allow(non_snake_case)]
 #[derive(Debug, Serialize)]
 pub struct SimulateJitResponse {
-    pub target: f64,
-    pub totalCovered: f64,
-    pub vaultsUsed: usize,
-    pub allocations: Vec<JitAllocationDto>,
+    pub target:         f64,
+    pub totalCovered:   f64,
+    pub vaultsUsed:     usize,
+    pub allocations:    Vec<JitAllocationDto>,
     pub isFullyCovered: bool,
-    pub shortfall: f64,
-    pub timestamp: i64,
+    pub shortfall:      f64,
+    pub timestamp:      i64,
 }
 
 #[derive(Debug, Deserialize)]
@@ -75,6 +81,7 @@ pub struct ExecuteJitRequest {
     pub target_amount: f64,
     pub asset_code: Option<String>,
     pub destination: Option<String>,
+    pub transfer_id: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -112,14 +119,19 @@ pub async fn simulate_jit(
     let allocations = split_result.allocations
         .into_iter()
         .map(|alloc| JitAllocationDto {
-            walletId: alloc.walletId,
-            walletName: alloc.walletName,
-            walletType: alloc.walletType,
-            publicKey: alloc.publicKey,
-            amount: alloc.amount,
-            percentage: alloc.percentage,
-            available: alloc.available,
-            rawBalance: alloc.rawBalance,
+            walletId:           alloc.walletId,
+            walletName:         alloc.walletName,
+            walletType:         alloc.walletType,
+            publicKey:          alloc.publicKey,
+            amount:             alloc.amount,
+            percentage:         alloc.percentage,
+            rawBalance:         alloc.rawBalance,
+            stellarBaseReserve: alloc.stellarBaseReserve,
+            feeBuffer:          alloc.feeBuffer,
+            reserveBuffer:      alloc.reserveBuffer,
+            usableLiquidity:    alloc.usableLiquidity,
+            liquidityState:     alloc.liquidityState.to_string(),
+            exclusionReason:    alloc.exclusionReason,
         })
         .collect();
 
@@ -171,32 +183,36 @@ pub async fn execute_jit(
     let child_count = split_result.allocations.len();
 
     // ── 2. Stage parent transaction ────────────────────────────────────────────
-    let transfer_id = format!(
-        "TX-{}",
-        &Uuid::new_v4().simple().to_string().to_uppercase()[..8]
-    );
+    let transfer_id = payload.transfer_id.unwrap_or_else(|| {
+        format!("TX-{}", &Uuid::new_v4().simple().to_string().to_uppercase()[..8])
+    });
 
     // Idempotency check: if children already exist for this transfer_id,
     // return the existing execution state without re-triggering Horizon.
-    // (Edge case: frontend retry before background task completes)
-    let new_tx = NewTransaction {
-        transfer_id:      transfer_id.clone(),
-        org_id,
-        amount:           amount_bd.clone(),
-        asset_code:       asset_code.clone(),
-        destination:      destination.clone(),
-        source_breakdown: split_result.source_breakdown.clone(),
-        batch_id:         None,
-        recipient_count:  1,
+    // First, check if the transaction exists
+    let existing_tx = tx_queries::find_by_transfer_id(&state.db, &transfer_id).await.ok().flatten();
+    
+    let tx = if let Some(existing) = existing_tx {
+        existing
+    } else {
+        let new_tx = NewTransaction {
+            transfer_id:      transfer_id.clone(),
+            org_id,
+            amount:           amount_bd.clone(),
+            asset_code:       asset_code.clone(),
+            destination:      destination.clone(),
+            source_breakdown: split_result.source_breakdown.clone(),
+            batch_id:         None,
+            recipient_count:  1,
+        };
+        tx_queries::insert(&state.db, &new_tx).await?
     };
-
-    let tx = tx_queries::insert(&state.db, &new_tx).await?;
 
     let _ = state.broadcast_tx.send(serde_json::json!({
         "type":        "TRANSIT_STATE",
         "event_type":  "TRANSACTION_STAGED",
         "ref_id":      tx.transfer_id,
-        "new_status":  "AUTHORIZING",
+        "new_status":  tx.status,
         "org_id":      org_id,
         "child_count": child_count,
         "timestamp":   chrono::Utc::now().to_rfc3339(),
@@ -500,6 +516,7 @@ async fn execute_multi_wallet(
             "type":              "TRANSIT_STATE",
             "event_type":        "CHILD_SUBMITTED",
             "ref_id":            parent_tx_id,
+            "new_status":        "STELLAR_LEDGER",
             "child_id":          child.id,
             "wallet_id":         alloc.walletId,
             "wallet_name":       alloc.walletName,

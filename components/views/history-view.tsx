@@ -27,6 +27,7 @@ const STATUS_CFG: Record<TransactionStatus, {
   ROUTING:        { label: 'ROUTING',        textClass: 'text-amber-700 dark:text-amber-300', bgClass: 'bg-amber-500/10', borderClass: 'border-amber-500/30', pulseClass: 'bg-amber-500', pulse: true  },
   STELLAR_LEDGER: { label: 'CONFIRMING',     textClass: 'text-cyan-700 dark:text-cyan-300', bgClass: 'bg-cyan-500/10',  borderClass: 'border-cyan-500/30', pulseClass: 'bg-cyan-500', pulse: true  },
   SETTLED:        { label: 'SETTLED',        textClass: 'text-emerald-700 dark:text-emerald-400', bgClass: 'bg-emerald-500/10', borderClass: 'border-emerald-500/30', pulseClass: 'bg-emerald-500', pulse: false },
+  PARTIAL_FAILURE:{ label: 'PARTIAL',        textClass: 'text-orange-700 dark:text-orange-400', bgClass: 'bg-orange-500/10',  borderClass: 'border-orange-500/30', pulseClass: 'bg-orange-500', pulse: false },
   FAILED:         { label: 'FAILED',         textClass: 'text-red-700 dark:text-red-400',  bgClass: 'bg-red-500/10',  borderClass: 'border-red-500/30', pulseClass: 'bg-red-500', pulse: false },
 };
 
@@ -76,7 +77,14 @@ function TxRowCard({ tx, index }: { tx: StellarTransaction; index: number }) {
   const [isPressed, setIsPressed] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
-  const cfg = STATUS_CFG[tx.status];
+  const cfg = STATUS_CFG[tx.status] || {
+    label: tx.status || 'UNKNOWN',
+    textClass: 'text-slate-500 dark:text-slate-400',
+    bgClass: 'bg-slate-500/10',
+    borderClass: 'border-slate-500/30',
+    pulseClass: 'bg-slate-500',
+    pulse: false
+  };
   const isLive = tx.status === 'AUTHORIZING' || tx.status === 'ROUTING' || tx.status === 'STELLAR_LEDGER';
   const isMulti = tx.recipientCount > 1;
 

@@ -29,13 +29,14 @@ import { MultiSigView } from '@/components/views/multisig-view';
 import { AnalyticsView } from '@/components/views/analytics-view';
 import { SettingsView } from '@/components/views/settings-view';
 import { HistoryView } from '@/components/views/history-view';
+import { GovernanceView } from '@/components/views/governance-view';
 import { useTheme } from 'next-themes';
 import { auth, googleProvider, db } from '@/lib/firebase';
 import { signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { doc, getDocFromServer, setDoc, query, collection, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { useTransactionStore } from '@/lib/stores/transaction-store';
 
-type ActiveView = 'dashboard' | 'history' | 'treasury' | 'routing' | 'batch' | 'transit' | 'multisig' | 'analytics' | 'settings';
+type ActiveView = 'dashboard' | 'history' | 'treasury' | 'routing' | 'batch' | 'transit' | 'multisig' | 'analytics' | 'settings' | 'governance';
 
 export default function AppShell() {
   const [activeView, setActiveView] = useState<ActiveView>('dashboard');
@@ -48,17 +49,7 @@ export default function AppShell() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     
-    // Test DB connection silently
-    const testConnection = async () => {
-      try {
-        await getDocFromServer(doc(db, 'test', 'connection'));
-      } catch (e: any) {
-        if(e.message?.includes('the client is offline')) {
-          console.error("Please check your Firebase configuration.");
-        }
-      }
-    };
-    testConnection();
+
 
     // --- TEMPORARY MOCK AUTH ---
     setUser({
@@ -125,6 +116,7 @@ export default function AppShell() {
     { id: 'batch', label: 'Batch Transfers', icon: FileBox },
     { id: 'transit', label: 'Transit Center', icon: ActivitySquare },
     { id: 'multisig', label: 'Multi-Sig Approvals', icon: ShieldCheck },
+    { id: 'governance', label: 'Governance', icon: ShieldCheck },
     { id: 'analytics', label: 'Intelligence Analytics', icon: BarChart3 },
     { id: 'settings', label: 'System Settings', icon: Settings },
   ] as const;
@@ -140,6 +132,7 @@ export default function AppShell() {
       case 'analytics': return <AnalyticsView />;
       case 'settings': return <SettingsView />;
       case 'history': return <HistoryView />;
+      case 'governance': return <GovernanceView />;
       default: return <DashboardView />;
     }
   };
