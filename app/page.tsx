@@ -18,7 +18,8 @@ import {
   Command, 
   User,
   LogOut,
-  History
+  History,
+  ArrowDownToLine
 } from 'lucide-react';
 import { DashboardView } from '@/components/views/dashboard-view';
 import { TreasuryView } from '@/components/views/treasury-view';
@@ -30,13 +31,14 @@ import { AnalyticsView } from '@/components/views/analytics-view';
 import { SettingsView } from '@/components/views/settings-view';
 import { HistoryView } from '@/components/views/history-view';
 import { GovernanceView } from '@/components/views/governance-view';
+import { FundingView } from '@/components/views/funding-view';
 import { useTheme } from 'next-themes';
 import { auth, googleProvider, db } from '@/lib/firebase';
 import { signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { doc, getDocFromServer, setDoc, query, collection, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { useTransactionStore } from '@/lib/stores/transaction-store';
 
-type ActiveView = 'dashboard' | 'history' | 'treasury' | 'routing' | 'batch' | 'transit' | 'multisig' | 'analytics' | 'settings' | 'governance';
+type ActiveView = 'dashboard' | 'history' | 'treasury' | 'routing' | 'batch' | 'transit' | 'multisig' | 'analytics' | 'settings' | 'governance' | 'funding';
 
 export default function AppShell() {
   const [activeView, setActiveView] = useState<ActiveView>('dashboard');
@@ -109,16 +111,17 @@ export default function AppShell() {
   };
 
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: Building2 },
-    { id: 'history', label: 'Transaction History', icon: History },
-    { id: 'treasury', label: 'Treasury Center', icon: Wallet },
-    { id: 'routing', label: 'Smart Routing', icon: ArrowRightLeft },
-    { id: 'batch', label: 'Batch Transfers', icon: FileBox },
-    { id: 'transit', label: 'Transit Center', icon: ActivitySquare },
-    { id: 'multisig', label: 'Multi-Sig Approvals', icon: ShieldCheck },
-    { id: 'governance', label: 'Governance', icon: ShieldCheck },
-    { id: 'analytics', label: 'Intelligence Analytics', icon: BarChart3 },
-    { id: 'settings', label: 'System Settings', icon: Settings },
+    { id: 'dashboard',  label: 'Dashboard',             icon: Building2       },
+    { id: 'history',    label: 'Transaction History',    icon: History         },
+    { id: 'treasury',   label: 'Treasury Center',        icon: Wallet          },
+    { id: 'funding',    label: 'Funding Center',         icon: ArrowDownToLine },
+    { id: 'routing',    label: 'Smart Routing',          icon: ArrowRightLeft  },
+    { id: 'batch',      label: 'Batch Transfers',        icon: FileBox         },
+    { id: 'transit',    label: 'Transit Center',         icon: ActivitySquare  },
+    { id: 'multisig',   label: 'Multi-Sig Approvals',    icon: ShieldCheck     },
+    { id: 'governance', label: 'Governance',             icon: ShieldCheck     },
+    { id: 'analytics',  label: 'Intelligence Analytics', icon: BarChart3       },
+    { id: 'settings',   label: 'System Settings',        icon: Settings        },
   ] as const;
 
   const renderView = () => {
@@ -127,12 +130,13 @@ export default function AppShell() {
       case 'treasury': return <TreasuryView />;
       case 'routing': return <RoutingView onNavigate={setActiveView} />;
       case 'batch': return <BatchView />;
-      case 'transit': return <TransitView />;
-      case 'multisig': return <MultiSigView />;
-      case 'analytics': return <AnalyticsView />;
-      case 'settings': return <SettingsView />;
-      case 'history': return <HistoryView />;
+      case 'transit':    return <TransitView />;
+      case 'multisig':   return <MultiSigView />;
+      case 'analytics':  return <AnalyticsView />;
+      case 'settings':   return <SettingsView />;
+      case 'history':    return <HistoryView />;
       case 'governance': return <GovernanceView />;
+      case 'funding':    return <FundingView />;
       default: return <DashboardView />;
     }
   };

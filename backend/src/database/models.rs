@@ -648,14 +648,17 @@ pub struct NewAuditLog {
 // ─────────────────────────────────────────────────────────────────────────────
 
 pub mod audit_action {
-    pub const TRANSFER_CREATED:    &str = "TRANSFER_CREATED";
-    pub const APPROVAL_REQUESTED:  &str = "APPROVAL_REQUESTED";
-    pub const APPROVAL_GRANTED:    &str = "APPROVAL_GRANTED";
-    pub const APPROVAL_REJECTED:   &str = "APPROVAL_REJECTED";
-    pub const EXECUTION_STARTED:   &str = "EXECUTION_STARTED";
-    pub const EXECUTION_SETTLED:   &str = "EXECUTION_SETTLED";
-    pub const EXECUTION_FAILED:    &str = "EXECUTION_FAILED";
-    pub const AUTO_EXECUTED:       &str = "AUTO_EXECUTED";
+    pub const TRANSFER_CREATED:        &str = "TRANSFER_CREATED";
+    pub const APPROVAL_REQUESTED:      &str = "APPROVAL_REQUESTED";
+    pub const APPROVAL_GRANTED:        &str = "APPROVAL_GRANTED";
+    pub const APPROVAL_REJECTED:       &str = "APPROVAL_REJECTED";
+    pub const EXECUTION_STARTED:       &str = "EXECUTION_STARTED";
+    pub const EXECUTION_SETTLED:       &str = "EXECUTION_SETTLED";
+    pub const EXECUTION_FAILED:        &str = "EXECUTION_FAILED";
+    pub const AUTO_EXECUTED:           &str = "AUTO_EXECUTED";
+    pub const TREASURY_FUNDED:         &str = "TREASURY_FUNDED";
+    pub const FRIENDBOT_FUNDING:       &str = "FRIENDBOT_FUNDING";
+    pub const MANUAL_TREASURY_CREDIT:  &str = "MANUAL_TREASURY_CREDIT";
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

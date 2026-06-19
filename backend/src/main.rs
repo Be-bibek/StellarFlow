@@ -45,6 +45,9 @@ use crate::{
             request_approval, approve_request, reject_request,
             list_pending, list_history, get_audit_logs,
         },
+        funding::{
+            fund_via_friendbot, fund_manual, get_funding_history,
+        },
     },
     streaming::transit_engine::{soroban_event_poller, ws_gateway_handler},
 };
@@ -143,6 +146,14 @@ async fn main() -> anyhow::Result<()> {
         tracing::info!("Phase E governance migration applied successfully.");
     }
 
+    // ── Phase F: Run funding center migration ──────────────────────────────────
+    let migration_f_sql = include_str!("database/migration_f.sql");
+    if let Err(e) = sqlx::raw_sql(migration_f_sql).execute(&db_pool).await {
+        tracing::warn!(error = %e, "Phase F migration warning (may already be applied)");
+    } else {
+        tracing::info!("Phase F funding migration applied successfully.");
+    }
+
     crate::database::seed::seed_database(&db_pool, &cfg.aes_encryption_key)
         .await
         .expect("Failed to seed database");
@@ -220,13 +231,17 @@ async fn main() -> anyhow::Result<()> {
         // JIT
         .route("/jit/simulate",                 post(simulate_jit))
         .route("/jit/execute",                  post(execute_jit))
-        // Phase E — Governance Layer (new routes, separate namespace)
+        // Phase E — Governance Layer
         .route("/gov/approvals/request",         post(request_approval))
         .route("/gov/approvals/pending",          get(list_pending))
         .route("/gov/approvals/history",          get(list_history))
         .route("/gov/approvals/:id/approve",      post(approve_request))
         .route("/gov/approvals/:id/reject",       post(reject_request))
-        .route("/gov/audit/logs",                 get(get_audit_logs));
+        .route("/gov/audit/logs",                 get(get_audit_logs))
+        // Phase F — Funding Center
+        .route("/funding/friendbot",              post(fund_via_friendbot))
+        .route("/funding/manual",                 post(fund_manual))
+        .route("/funding/history",                get(get_funding_history));
 
     let app = Router::new()
         // REST API namespace

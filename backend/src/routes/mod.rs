@@ -5,3 +5,4 @@ pub mod wallets;
 pub mod transactions;
 pub mod jit;
 pub mod governance;
+pub mod funding;
