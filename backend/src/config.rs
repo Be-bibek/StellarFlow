@@ -82,10 +82,6 @@ pub struct Config {
     /// Default: 1024
     pub broadcast_channel_capacity: usize,
 
-    // ── Deployment ────────────────────────────────────────────────────────────
-    /// Allowed origin for strict CORS in production.
-    pub frontend_url: String,
-
     // ── Background Workers ────────────────────────────────────────────────────
     /// How often (in seconds) the channel heartbeat task sweeps stale locks.
     /// Default: 60 (sweep every minute — RISK-7 mitigation)
@@ -152,9 +148,6 @@ impl Config {
 
             // ── WebSocket ─────────────────────────────────────────────────────
             broadcast_channel_capacity: env_parse("BROADCAST_CHANNEL_CAPACITY", 1024usize)?,
-
-            // ── Deployment ────────────────────────────────────────────────────
-            frontend_url: env_str("FRONTEND_URL", "http://localhost:3000"),
 
             // ── Background Workers ────────────────────────────────────────────
             channel_heartbeat_interval_secs: env_parse("CHANNEL_HEARTBEAT_INTERVAL_SECS", 60u64)?,

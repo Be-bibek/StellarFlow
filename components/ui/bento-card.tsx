@@ -14,7 +14,7 @@ interface BentoCardProps extends HTMLMotionProps<"div"> {
   // Magic Bento specific props (optional per card)
   enableStars?: boolean;
   enableTilt?: boolean;
-  enableMagnetism?: boolean;
+  enableMagnetism?: boolean; // kept for API compat but always off now
   enableBorderGlow?: boolean;
   clickEffect?: boolean;
   particleCount?: number;
@@ -50,7 +50,7 @@ export function BentoCard({
   noPadding = false,
   enableStars = true,
   enableTilt = false,
-  enableMagnetism = true,
+  enableMagnetism = false, // GRAVITY/MAGNETISM DISABLED — user removed this
   enableBorderGlow = true,
   clickEffect = true,
   particleCount = DEFAULT_PARTICLE_COUNT,
@@ -67,7 +67,6 @@ export function BentoCard({
   const isHoveredRef = useRef(false);
   const memoizedParticles = useRef<HTMLDivElement[]>([]);
   const particlesInitialized = useRef(false);
-  const magnetismAnimationRef = useRef<gsap.core.Tween | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -145,7 +144,6 @@ export function BentoCard({
   const clearAllParticles = useCallback(() => {
     timeoutsRef.current.forEach(clearTimeout);
     timeoutsRef.current = [];
-    magnetismAnimationRef.current?.kill();
 
     particlesRef.current.forEach(particle => {
       gsap.to(particle, {
@@ -173,7 +171,6 @@ export function BentoCard({
         if (!isHoveredRef.current || !divRef.current) return;
         const clone = particle.cloneNode(true) as HTMLDivElement;
         
-        // Ensure color matches theme
         clone.style.background = `rgba(${glowColor}, 1)`;
         clone.style.boxShadow = `0 0 6px rgba(${glowColor}, 0.6)`;
         
@@ -246,14 +243,7 @@ export function BentoCard({
         });
       }
 
-      if (enableMagnetism) {
-        gsap.to(divRef.current, {
-          x: 0,
-          y: 0,
-          duration: 0.3,
-          ease: 'power2.out'
-        });
-      }
+      // MAGNETISM REMOVED — no x/y snap-back needed
     }
 
     if (props.onMouseLeave) {
@@ -291,16 +281,7 @@ export function BentoCard({
         });
       }
 
-      if (enableMagnetism) {
-        const magnetX = (x - centerX) * 0.05;
-        const magnetY = (y - centerY) * 0.05;
-        magnetismAnimationRef.current = gsap.to(divRef.current, {
-          x: magnetX,
-          y: magnetY,
-          duration: 0.3,
-          ease: 'power2.out'
-        });
-      }
+      // MAGNETISM/GRAVITY DISABLED — card stays perfectly still on hover
     }
 
     if (props.onMouseMove) {

@@ -26,11 +26,10 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use axum::http::{header, HeaderValue, Method};
 use sqlx::postgres::PgPoolOptions;
 use tokio::sync::broadcast;
 use tower_http::{
-    cors::{AllowOrigin, CorsLayer},
+    cors::{Any, CorsLayer},
     trace::TraceLayer,
 };
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
@@ -41,7 +40,7 @@ use crate::{
         payments::{get_payment_status, handle_batch_payout},
         wallets::get_wallets,
         transactions::get_transactions,
-        jit::simulate_jit,
+        jit::{simulate_jit, execute_jit},
         governance::{
             request_approval, approve_request, reject_request,
             list_pending, list_history, get_audit_logs,
@@ -49,8 +48,6 @@ use crate::{
         funding::{
             fund_via_friendbot, fund_manual, get_funding_history,
         },
-        treasury::get_treasury_summary,
-        system::sequence_health,
     },
     streaming::transit_engine::{soroban_event_poller, ws_gateway_handler},
 };
@@ -191,6 +188,7 @@ async fn main() -> anyhow::Result<()> {
     let (broadcast_tx, _) =
         broadcast::channel::<serde_json::Value>(cfg.broadcast_channel_capacity);
 
+    // ── 7. Build shared state ─────────────────────────────────────────────────
     let state = Arc::new(AppState {
         db:           db_pool,
         redis:        redis_client,
@@ -198,19 +196,6 @@ async fn main() -> anyhow::Result<()> {
         horizon,
         config:       cfg.clone(),
     });
-
-    // ── Phase F.2: Startup Sequence Self-Healing ──────────────────────────────
-    if let Ok(redis_conn) = redis::aio::ConnectionManager::new(state.redis.clone()).await {
-        if let Err(e) = crate::stellar::sequence_manager::verify_and_heal_all(
-            &state.db,
-            redis_conn,
-            &state.horizon,
-        ).await {
-            tracing::error!(error = %e, "Failed to execute sequence self-healing on startup");
-        } else {
-            tracing::info!("Sequence self-healing completed successfully");
-        }
-    }
 
     // ── 8. Spawn background workers ────────────────────────────────────────────
     {
@@ -226,17 +211,10 @@ async fn main() -> anyhow::Result<()> {
     }
 
     // ── 9. Build Axum router ──────────────────────────────────────────────────
-    let cors_origin = HeaderValue::from_str(&cfg.frontend_url)
-        .unwrap_or_else(|_| HeaderValue::from_static("http://localhost:3000"));
-
     let cors = CorsLayer::new()
-        .allow_origin(AllowOrigin::exact(cors_origin))
-        .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
-        .allow_headers([
-            header::AUTHORIZATION,
-            header::CONTENT_TYPE,
-            header::ACCEPT,
-        ]);
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
 
     let api_v1 = Router::new()
         // Payment routes
@@ -252,6 +230,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/transactions",                 get(get_transactions))
         // JIT
         .route("/jit/simulate",                 post(simulate_jit))
+        .route("/jit/execute",                  post(execute_jit))
         // Phase E — Governance Layer
         .route("/gov/approvals/request",         post(request_approval))
         .route("/gov/approvals/pending",          get(list_pending))
@@ -262,11 +241,7 @@ async fn main() -> anyhow::Result<()> {
         // Phase F — Funding Center
         .route("/funding/friendbot",              post(fund_via_friendbot))
         .route("/funding/manual",                 post(fund_manual))
-        .route("/funding/history",                get(get_funding_history))
-        // Phase F.1 — Treasury
-        .route("/treasury/summary",               get(get_treasury_summary))
-        // Phase F.2 — System Diagnostics
-        .route("/system/sequence-health",         get(sequence_health));
+        .route("/funding/history",                get(get_funding_history));
 
     let app = Router::new()
         // REST API namespace

@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react'
 import { Playfair_Display } from 'next/font/google'
 import { motion, AnimatePresence } from 'motion/react'
-import Silk from '@/components/Silk'
+import { BeamsBackground } from '@/components/ui/beams-background'
+import { useTheme } from 'next-themes'
+import { Sun, Moon } from 'lucide-react'
 import { useBackendHealth } from '@/components/BootSequenceComponents'
 import { 
   ScreenIntro, 
@@ -22,6 +24,7 @@ export function BootSequence({ onComplete }: { onComplete: () => void }) {
   const [screen, setScreen] = useState<number>(1)
   const { healthy } = useBackendHealth(true)
   const [launched, setLaunched] = useState(false)
+  const { theme, setTheme } = useTheme()
 
   // Auto-advance screens 1 through 4
   useEffect(() => {
@@ -43,16 +46,21 @@ export function BootSequence({ onComplete }: { onComplete: () => void }) {
   }, [launched, onComplete])
 
   return (
-    <div className={`min-h-screen bg-zinc-950 text-zinc-50 font-sans selection:bg-zinc-800 relative overflow-hidden ${playfair.className}`}>
-      {/* Background Silk Effect */}
-      <div className="absolute inset-0 z-0 pointer-events-none opacity-80 mix-blend-screen transition-opacity duration-1000" style={{ opacity: launched ? 0 : 0.8 }}>
-        <Silk
-          speed={5}
-          scale={1}
-          color="#ff0000"
-          noiseIntensity={1.5}
-          rotation={4.39}
-        />
+    <div className={`min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-zinc-50 font-sans selection:bg-blue-200 dark:selection:bg-zinc-800 relative overflow-hidden transition-colors duration-500 ${playfair.className}`}>
+      
+      {/* Theme Toggle */}
+      <div className="absolute top-6 right-6 z-50">
+        <button 
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          className="p-2 rounded-full bg-slate-200 dark:bg-white/10 hover:bg-slate-300 dark:hover:bg-white/20 transition-colors"
+        >
+          {theme === 'dark' ? <Sun className="w-5 h-5 text-yellow-500" /> : <Moon className="w-5 h-5 text-blue-600" />}
+        </button>
+      </div>
+
+      {/* Background Beams Effect */}
+      <div className="absolute inset-0 z-0 pointer-events-none transition-opacity duration-1000" style={{ opacity: launched ? 0 : 1 }}>
+        <BeamsBackground />
       </div>
 
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">

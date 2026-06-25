@@ -236,6 +236,22 @@ function TxRowCard({ tx, index }: { tx: StellarTransaction; index: number }) {
                   </span>
                 </div>
               ))}
+
+              {/* View on Stellar Expert — shows whenever backend returns a real tx hash */}
+              {tx.stellarTxHash && (
+                <div className="col-span-2 pt-2 mt-1 border-t border-slate-200 dark:border-white/10">
+                  <a
+                    href={`https://stellar.expert/explorer/testnet/tx/${tx.stellarTxHash}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex items-center gap-1.5 text-[10px] font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 transition-colors"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    View on Stellar Expert (Testnet)
+                  </a>
+                </div>
+              )}
             </div>
           </motion.div>
         )}

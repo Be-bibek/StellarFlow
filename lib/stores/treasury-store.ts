@@ -161,6 +161,10 @@ interface TreasuryState {
   totalBalance: number;
   activeWallets: Wallet[];
 
+  // Mock Funding History (Recruiter Mode)
+  mockFundingHistory: any[];
+  addMockFundingHistory: (item: any) => void;
+
   // Global summary KPI data
   summary: TreasurySummary | null;
 
@@ -248,16 +252,16 @@ export const useTreasuryStore = create<TreasuryState>((set, get) => ({
   wallets: DEMO_WALLETS,
   isLoading: false,
   lastUpdated: Date.now(),
+  mockFundingHistory: [],
 
-  get totalBalance() {
-    return get().wallets
-      .filter((w) => w.isActive)
-      .reduce((sum, w) => sum + w.balance, 0);
+  addMockFundingHistory: (item) => {
+    set((state) => ({
+      mockFundingHistory: [item, ...state.mockFundingHistory]
+    }));
   },
 
-  get activeWallets() {
-    return get().wallets.filter((w) => w.isActive);
-  },
+  totalBalance: DEMO_WALLETS.filter(w => w.isActive).reduce((sum, w) => sum + w.balance, 0),
+  activeWallets: DEMO_WALLETS.filter(w => w.isActive),
 
   summary: null,
 
@@ -268,8 +272,12 @@ export const useTreasuryStore = create<TreasuryState>((set, get) => ({
 
   loadWallets: (wallets) => {
     const data = wallets ?? DEMO_WALLETS;
+    const activeWallets = data.filter(w => w.isActive);
+    const totalBalance = activeWallets.reduce((sum, w) => sum + w.balance, 0);
     set({
       wallets: data,
+      activeWallets,
+      totalBalance,
       lastUpdated: Date.now(),
     });
   },
@@ -289,8 +297,12 @@ export const useTreasuryStore = create<TreasuryState>((set, get) => ({
         isActive: w.is_active,
         description: w.description
       }));
+      const activeWallets = mapped.filter((w: Wallet) => w.isActive);
+      const totalBalance = activeWallets.reduce((sum: number, w: Wallet) => sum + w.balance, 0);
       set({
         wallets: mapped,
+        activeWallets,
+        totalBalance,
         isLoading: false,
         lastUpdated: Date.now(),
       });
@@ -312,12 +324,19 @@ export const useTreasuryStore = create<TreasuryState>((set, get) => ({
   },
 
   updateBalance: (walletId, newBalance) => {
-    set((state) => ({
-      wallets: state.wallets.map((w) =>
+    set((state) => {
+      const wallets = state.wallets.map((w) =>
         w.id === walletId ? { ...w, balance: newBalance } : w
-      ),
-      lastUpdated: Date.now(),
-    }));
+      );
+      const activeWallets = wallets.filter(w => w.isActive);
+      const totalBalance = activeWallets.reduce((sum, w) => sum + w.balance, 0);
+      return {
+        wallets,
+        activeWallets,
+        totalBalance,
+        lastUpdated: Date.now(),
+      };
+    });
   },
 
   simulateJitSplit: async (targetAmount: number) => {
@@ -357,11 +376,19 @@ export const useTreasuryStore = create<TreasuryState>((set, get) => ({
   },
 
   setWalletActive: (walletId, active) => {
-    set((state) => ({
-      wallets: state.wallets.map((w) =>
+    set((state) => {
+      const wallets = state.wallets.map((w) =>
         w.id === walletId ? { ...w, isActive: active } : w
-      ),
-    }));
+      );
+      const activeWallets = wallets.filter(w => w.isActive);
+      const totalBalance = activeWallets.reduce((sum, w) => sum + w.balance, 0);
+      return {
+        wallets,
+        activeWallets,
+        totalBalance,
+        lastUpdated: Date.now(),
+      };
+    });
   },
 }));
 

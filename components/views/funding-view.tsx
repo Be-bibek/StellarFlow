@@ -44,35 +44,108 @@ interface FundingHistoryItem {
 // API helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function fetchWallets(): Promise<WalletData[]> {
+import { useTreasuryStore } from '@/lib/stores/treasury-store';
+
+async function fetchWalletsFallback(): Promise<WalletData[]> {
   const r = await fetch('/api/wallets');
   if (!r.ok) return [];
   return r.json();
 }
 
 async function triggerFriendbot(walletId: string, reason?: string): Promise<FundingResult> {
-  const r = await fetch('/api/funding/friendbot', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ wallet_id: walletId, reason }),
-  });
-  return r.json();
+  try {
+    const r = await fetch('/api/funding/friendbot', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wallet_id: walletId, reason }),
+    });
+    if (!r.ok) throw new Error('Backend offline');
+    return await r.json();
+  } catch (e) {
+    // Recruiter Mode Fallback
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    // Increment the mock balance and history
+    const store = useTreasuryStore.getState();
+    const w = store.wallets.find(w => w.id === walletId);
+    if (w) {
+      store.updateBalance(walletId, w.balance + 10000);
+      store.addMockFundingHistory({
+        id: 'mock_hist_' + Date.now(),
+        wallet_id: walletId,
+        wallet_name: w.name,
+        amount: 10000,
+        method: 'friendbot',
+        reason: reason || 'Recruiter testnet faucet',
+        actor_id: 'mock-user-123',
+        stellar_tx_hash: 'mock_tx_' + Date.now(),
+        created_at: new Date().toISOString()
+      });
+    }
+    
+    return {
+      success: true,
+      wallet_id: walletId,
+      amount_funded: 10000,
+      method: 'friendbot',
+      message: 'Mock Friendbot Funding Successful (Recruiter Mode)',
+      stellar_tx_hash: 'mock_tx_' + Date.now()
+    };
+  }
 }
 
 async function triggerManualFund(walletId: string, amount: number, reason?: string): Promise<FundingResult> {
-  const r = await fetch('/api/funding/manual', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ wallet_id: walletId, amount, reason }),
-  });
-  return r.json();
+  try {
+    const r = await fetch('/api/funding/manual', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wallet_id: walletId, amount, reason }),
+    });
+    if (!r.ok) throw new Error('Backend offline');
+    return await r.json();
+  } catch (e) {
+    // Recruiter Mode Fallback
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    // Increment the mock balance and history
+    const store = useTreasuryStore.getState();
+    const w = store.wallets.find(w => w.id === walletId);
+    if (w) {
+      store.updateBalance(walletId, w.balance + amount);
+      store.addMockFundingHistory({
+        id: 'mock_hist_' + Date.now(),
+        wallet_id: walletId,
+        wallet_name: w.name,
+        amount: amount,
+        method: 'manual',
+        reason: reason || 'Recruiter manual deposit',
+        actor_id: 'mock-user-123',
+        stellar_tx_hash: 'mock_tx_' + Date.now(),
+        created_at: new Date().toISOString()
+      });
+    }
+
+    return {
+      success: true,
+      wallet_id: walletId,
+      amount_funded: amount,
+      method: 'manual',
+      message: 'Mock Manual Funding Successful (Recruiter Mode)',
+      stellar_tx_hash: 'mock_tx_' + Date.now()
+    };
+  }
 }
 
 async function fetchFundingHistory(): Promise<FundingHistoryItem[]> {
-  const r = await fetch('/api/funding/history?limit=50');
-  if (!r.ok) return [];
-  const data = await r.json();
-  return data.items ?? [];
+  try {
+    const r = await fetch('/api/funding/history?limit=50');
+    if (!r.ok) throw new Error('Backend offline');
+    const data = await r.json();
+    return data.items ?? [];
+  } catch (e) {
+    // Recruiter Mode Fallback
+    return useTreasuryStore.getState().mockFundingHistory;
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -456,6 +529,9 @@ function FundingHistoryTable({ history }: { history: FundingHistoryItem[] }) {
 type FundingTab = 'overview' | 'history';
 
 export function FundingView() {
+  const treasuryWallets = useTreasuryStore((state) => state.wallets);
+  const fetchTreasuryWallets = useTreasuryStore((state) => state.fetchWallets);
+
   const [wallets, setWallets]     = useState<WalletData[]>([]);
   const [history, setHistory]     = useState<FundingHistoryItem[]>([]);
   const [loading, setLoading]     = useState(true);
@@ -469,11 +545,29 @@ export function FundingView() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [w, h] = await Promise.all([fetchWallets(), fetchFundingHistory()]);
-    setWallets(w);
+    
+    // Ensure treasury store is populated
+    await fetchTreasuryWallets();
+    
+    // Fetch real backend data (history)
+    const [h] = await Promise.all([fetchFundingHistory()]);
     setHistory(h);
     setLoading(false);
-  }, []);
+  }, [fetchTreasuryWallets]);
+
+  // Sync wallets from the global treasury store so mock data works flawlessly
+  useEffect(() => {
+    const mapped: WalletData[] = treasuryWallets.map(w => ({
+      id: w.id,
+      name: w.name,
+      public_key: w.publicKey,
+      type: w.type,
+      balance: w.balance,
+      is_active: w.isActive,
+      description: w.description
+    }));
+    setWallets(mapped);
+  }, [treasuryWallets]);
 
   useEffect(() => { load(); }, [load]);
 

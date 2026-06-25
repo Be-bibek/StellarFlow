@@ -297,25 +297,37 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
   executeJit: async (amount, breakdown) => {
     if (get().pipelineIsRunning) return;
 
-    // Call Governance request API instead of JIT direct execution
-    const res = await fetch('/api/gov/approvals/request', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ amount: amount, asset_code: 'native', destination: 'Multiple', purpose: 'Smart Routing Transfer' })
-    });
-
-    if (!res.ok) {
-      throw new Error("Failed to request approval");
+    let data;
+    try {
+      const res = await fetch('/api/gov/approvals/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount, asset_code: 'native', destination: 'Multiple', purpose: 'Smart Routing Transfer' })
+      });
+      if (!res.ok) throw new Error('Backend offline');
+      data = await res.json();
+    } catch (e) {
+      // Recruiter Mode — simulate governance gating locally
+      const isLarge = amount > 50000;
+      const mockHash = Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join('');
+      data = {
+        transfer_id: 'sf_' + mockHash.slice(0, 8) + '_MOCK',
+        status: isLarge ? 'PENDING_APPROVAL' : 'AUTO_EXECUTING'
+      };
+      if (!isLarge) {
+        // Auto-advance pipeline stages on timers
+        const tid = data.transfer_id;
+        const settle = (stage: TransactionStatus, delay: number, meta?: any) =>
+          setTimeout(() => get().updateTransactionStatus(tid, stage, meta), delay);
+        settle('ROUTING',        1200);
+        settle('STELLAR_LEDGER', 3000);
+        settle('SETTLED',        5500, { hash: mockHash, ledger: 50001000 + Math.floor(Math.random() * 9000) });
+      }
     }
 
-    const data = await res.json();
     const transferId = data.transfer_id;
+    if (data.status === 'PENDING_APPROVAL') return 'PENDING_APPROVAL';
 
-    if (data.status === 'PENDING_APPROVAL') {
-      return 'PENDING_APPROVAL';
-    }
-
-    // Initialise pipeline with all stages pending
     const initialStages: PipelineStage[] = PIPELINE_STAGES.map((s) => ({
       ...s,
       startedAt: undefined,
@@ -323,24 +335,25 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
       durationMs: undefined,
     }));
 
-    const initialPipeline: TransitPipeline = {
-      transferId,
-      currentStage: "AUTHORIZING",
-      stages: initialStages,
-      routingBreakdown: breakdown,
-    };
-
-    set({ activePipeline: initialPipeline, pipelineIsRunning: true });
+    set({
+      activePipeline: {
+        transferId,
+        currentStage: 'AUTHORIZING',
+        stages: initialStages,
+        routingBreakdown: breakdown,
+      },
+      pipelineIsRunning: true
+    });
 
     get().addTransaction({
       id: transferId,
       transferId,
-      orgId: "org-1",
+      orgId: 'org-1',
       amount,
-      assetCode: "native",
-      destination: "Multiple",
+      assetCode: 'native',
+      destination: 'Multiple',
       sourceBreakdown: breakdown,
-      status: "AUTHORIZING",
+      status: 'AUTHORIZING',
       recipientCount: Object.keys(breakdown).length,
       createdAt: new Date().toISOString(),
     });
@@ -350,17 +363,15 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
 
   connectWebSocket: () => {
     if (get().wsConnected) return;
-    
-    // In production, NEXT_PUBLIC_API_URL points directly to the deployed backend.
-    // In local dev, it falls back to localhost.
-    const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+    // Skip in local dev when no explicit backend URL is set — prevents console spam
+    const rawApiUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (!rawApiUrl) return;
     const wsUrl = rawApiUrl.replace(/^http/, 'ws') + '/v1/transit/00000000-0000-0000-0000-000000000001';
     const ws = new WebSocket(wsUrl);
-    
     ws.onopen = () => set({ wsConnected: true });
     ws.onclose = () => {
       set({ wsConnected: false });
-      setTimeout(() => get().connectWebSocket(), 3000); // Auto-reconnect
+      if (get().wsConnected) setTimeout(() => get().connectWebSocket(), 5000);
     };
     
     ws.onmessage = (event) => {

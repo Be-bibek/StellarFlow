@@ -57,6 +57,24 @@ export default function AppShell() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     
+    // Skip boot sequence if already booted on this machine, or if the backend is healthy
+    if (typeof window !== 'undefined' && window.localStorage.getItem('stellarflow_booted') === 'true') {
+      setIntroFinished(true);
+      setBootFinished(true);
+    } else {
+      // Ping backend; if it's already running, skip the fake boot sequence
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+      fetch(`${apiUrl}/health`)
+        .then(res => {
+          if (res.ok) {
+            setIntroFinished(true);
+            setBootFinished(true);
+            if (typeof window !== 'undefined') window.localStorage.setItem('stellarflow_booted', 'true');
+          }
+        })
+        .catch(() => { /* ignore, show boot sequence */ });
+    }
+    
 
 
     // --- TEMPORARY MOCK AUTH ---
@@ -214,7 +232,12 @@ export default function AppShell() {
   }
 
   if (!bootFinished) {
-    return <BootSequence onComplete={() => setBootFinished(true)} />;
+    return (
+      <BootSequence onComplete={() => {
+        setBootFinished(true);
+        if (typeof window !== 'undefined') window.localStorage.setItem('stellarflow_booted', 'true');
+      }} />
+    );
   }
 
   return (
