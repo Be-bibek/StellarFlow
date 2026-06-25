@@ -1,0 +1,51 @@
+services:
+  # The main backend Rust application
+  - type: web
+    name: stellarflow-backend
+    env: docker
+    rootDir: backend
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: stellarflow-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: stellarflow-redis
+          property: connectionString
+      - key: BIND_ADDR
+        value: 0.0.0.0:8080
+      - key: STELLAR_NETWORK_PASSPHRASE
+        value: "Test SDF Network ; September 2015"
+      - key: STELLAR_SOROBAN_RPC_URL
+        value: "https://soroban-testnet.stellar.org"
+      - key: STELLAR_HORIZON_URL
+        value: "https://horizon-testnet.stellar.org"
+      - key: TREASURY_CONTRACT_ID
+        value: "CXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+      - key: RUST_LOG
+        value: "stellarflow_backend=info,tower_http=info,axum=info"
+      # IMPORTANT: Define the missing variables in your Render Dashboard:
+      # - STELLAR_ADMIN_PUBLIC_KEY
+      # - STELLAR_SIGNER_SECRET
+      # - MASTER_SECRET
+      # - PAYROLL_SECRET
+      # - OPERATIONS_SECRET
+      # - RESERVE_SECRET
+      # - MARKETING_SECRET
+      # - AES_ENCRYPTION_KEY
+
+  # Render Managed Redis
+  - type: redis
+    name: stellarflow-redis
+    plan: free
+
+databases:
+  # Render Managed PostgreSQL
+  - name: stellarflow-db
+    databaseName: stellarflow
+    user: stellarflow
+    plan: free
