@@ -42,6 +42,7 @@ services:
   - type: redis
     name: stellarflow-redis
     plan: free
+    ipAllowList: [] # Required by Render. Empty list means internal access only
 
 databases:
   # Render Managed PostgreSQL
