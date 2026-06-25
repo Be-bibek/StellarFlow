@@ -192,36 +192,55 @@ function computeJitSplit(
   wallets: Wallet[],
   targetAmount: number
 ): JitSimulationResult {
-  // Sort active wallets by priority
-  const active = wallets
-    .filter((w) => w.isActive)
-    .sort((a, b) => WALLET_PRIORITY[a.type] - WALLET_PRIORITY[b.type]);
+  const active = wallets.filter((w) => w.isActive);
+
+  // 1. Calculate usable liquidity across all wallets
+  let totalUsable = 0;
+  const usableMap = new Map<string, number>();
+
+  for (const wallet of active) {
+    const reserve = wallet.balance * RESERVE_BUFFER;
+    const available = Math.max(0, wallet.balance - reserve);
+    usableMap.set(wallet.id, available);
+    totalUsable += available;
+  }
 
   const allocations: JitAllocation[] = [];
   let remaining = targetAmount;
 
-  for (const wallet of active) {
-    if (remaining <= 0) break;
+  if (totalUsable > 0) {
+    // 2. Proportional Split
+    for (const wallet of active) {
+      if (remaining <= 0) break;
+      const available = usableMap.get(wallet.id) || 0;
+      if (available <= 0) continue;
 
-    // Apply 5% reserve buffer
-    const reserve = wallet.balance * RESERVE_BUFFER;
-    const available = Math.max(0, wallet.balance - reserve);
+      const proportion = available / totalUsable;
+      // Round down to avoid going over available due to floats
+      let take = Math.floor(targetAmount * proportion * 1000000) / 1000000;
+      
+      // Ensure we don't take more than available or remaining
+      take = Math.min(take, available, remaining);
+      
+      // If it's the last wallet, or take is tiny, just take whatever is left if we can
+      if (wallet === active[active.length - 1] && remaining <= available && remaining < 1.0) {
+          take = remaining;
+      }
 
-    if (available <= 0) continue;
-
-    const take = Math.min(available, remaining);
-    remaining -= take;
-
-    allocations.push({
-      walletId: wallet.id,
-      walletName: wallet.name,
-      walletType: wallet.type,
-      publicKey: wallet.publicKey,
-      amount: take,
-      percentage: 0, // calculated after loop
-      available,
-      rawBalance: wallet.balance,
-    });
+      if (take > 0.000001) {
+        remaining -= take;
+        allocations.push({
+          walletId: wallet.id,
+          walletName: wallet.name,
+          walletType: wallet.type,
+          publicKey: wallet.publicKey,
+          amount: take,
+          percentage: 0,
+          available,
+          rawBalance: wallet.balance,
+        });
+      }
+    }
   }
 
   const totalCovered = targetAmount - Math.max(0, remaining);
