@@ -40,11 +40,37 @@
   --color-red-600: #B91C1C;
   --color-red-200: rgba(185, 28, 28, 0.2);
   --color-red-50: rgba(185, 28, 28, 0.1);
+
+  --animate-blob: blob 7s infinite;
+
+  @keyframes blob {
+    0% { transform: translate(0px, 0px) scale(1); }
+    33% { transform: translate(30px, -50px) scale(1.1); }
+    66% { transform: translate(-20px, 20px) scale(0.9); }
+    100% { transform: translate(0px, 0px) scale(1); }
+  }
+}
+
+@layer utilities {
+  .animation-delay-2000 {
+    animation-delay: 2s;
+  }
+  .animation-delay-4000 {
+    animation-delay: 4s;
+  }
 }
 
 @layer utilities {
   .glass-panel {
     @apply bg-white/[0.03] backdrop-blur-xl border border-white/[0.08];
+  }
+  .gradient-blur {
+    filter: blur(40px);
+    background: radial-gradient(circle, rgba(139, 92, 246, 0.18) 0%, transparent 70%);
+  }
+  .spotlight-card-bg {
+    background: linear-gradient(145deg, rgba(39, 39, 42, 0.8) 0%, rgba(24, 24, 27, 0.8) 100%);
+    border: 1px solid rgba(161, 161, 170, 0.1);
   }
 }
 

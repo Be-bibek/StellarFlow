@@ -60,8 +60,8 @@ interface AuditLog {
 // API helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-// The Next.js proxy maps /api/* → http://127.0.0.1:8080/api/v1/*
-// So /api/gov/* → /api/v1/gov/* on the backend
+// In local dev, Next.js rewrites /api/* -> http://127.0.0.1:8080/api/v1/*
+// In production, Vercel routes /api/* to the deployed Render backend URL.
 const API = '/api/gov';
 
 async function fetchPending(): Promise<GovernanceRequest[]> {
@@ -121,7 +121,7 @@ async function rejectRequest(id: string, comment?: string): Promise<any> {
 // Status helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: React.ElementType }> = {
+const STATUS_CONFIG: Record<string, { label: string, color: string, bg: string, icon: any }> = {
   PENDING_APPROVAL: { label: 'Pending',   color: 'text-amber-500',  bg: 'bg-amber-500/10',  icon: Clock },
   APPROVED:         { label: 'Approved',  color: 'text-emerald-500', bg: 'bg-emerald-500/10', icon: CheckCircle2 },
   REJECTED:         { label: 'Rejected',  color: 'text-red-500',    bg: 'bg-red-500/10',    icon: XCircle },
@@ -738,7 +738,7 @@ export function GovernanceView() {
     setActiveTab('audit');
   };
 
-  const tabs: { id: GovernanceTab; label: string; icon: React.ElementType; desc: string }[] = [
+  const tabs: { id: GovernanceTab; label: string; icon: any; desc: string }[] = [
     { id: 'inbox',    label: 'Approval Inbox',    icon: ShieldCheck,  desc: 'Review & act on pending approvals' },
     { id: 'timeline', label: 'Approval Timeline',  icon: Activity,     desc: 'Lifecycle view for each request' },
     { id: 'audit',    label: 'Audit Log',          icon: FileText,     desc: 'Immutable compliance trail' },

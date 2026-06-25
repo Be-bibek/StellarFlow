@@ -38,9 +38,14 @@ import { signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser } fr
 import { doc, getDocFromServer, setDoc, query, collection, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { useTransactionStore } from '@/lib/stores/transaction-store';
 
+import { BootSequence } from '@/components/BootSequence';
+import { IntroScreen } from '@/components/IntroScreen';
+
 type ActiveView = 'dashboard' | 'history' | 'treasury' | 'routing' | 'batch' | 'transit' | 'multisig' | 'analytics' | 'settings' | 'governance' | 'funding';
 
 export default function AppShell() {
+  const [introFinished, setIntroFinished] = useState(false);
+  const [bootFinished, setBootFinished] = useState(false);
   const [activeView, setActiveView] = useState<ActiveView>('dashboard');
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -201,6 +206,14 @@ export default function AppShell() {
          </div>
       </div>
     );
+  }
+
+  if (!introFinished) {
+    return <IntroScreen onScrollComplete={() => setIntroFinished(true)} />;
+  }
+
+  if (!bootFinished) {
+    return <BootSequence onComplete={() => setBootFinished(true)} />;
   }
 
   return (

@@ -26,10 +26,11 @@ use axum::{
     routing::{get, post},
     Router,
 };
+use axum::http::{header, HeaderValue, Method};
 use sqlx::postgres::PgPoolOptions;
 use tokio::sync::broadcast;
 use tower_http::{
-    cors::{Any, CorsLayer},
+    cors::{AllowOrigin, CorsLayer},
     trace::TraceLayer,
 };
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
@@ -225,10 +226,17 @@ async fn main() -> anyhow::Result<()> {
     }
 
     // ── 9. Build Axum router ──────────────────────────────────────────────────
+    let cors_origin = HeaderValue::from_str(&cfg.frontend_url)
+        .unwrap_or_else(|_| HeaderValue::from_static("http://localhost:3000"));
+
     let cors = CorsLayer::new()
-        .allow_origin(Any)
-        .allow_methods(Any)
-        .allow_headers(Any);
+        .allow_origin(AllowOrigin::exact(cors_origin))
+        .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
+        .allow_headers([
+            header::AUTHORIZATION,
+            header::CONTENT_TYPE,
+            header::ACCEPT,
+        ]);
 
     let api_v1 = Router::new()
         // Payment routes

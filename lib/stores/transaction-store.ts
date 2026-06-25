@@ -351,7 +351,8 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
   connectWebSocket: () => {
     if (get().wsConnected) return;
     
-    // Connect to real backend WebSocket
+    // In production, NEXT_PUBLIC_API_URL points directly to the deployed backend.
+    // In local dev, it falls back to localhost.
     const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
     const wsUrl = rawApiUrl.replace(/^http/, 'ws') + '/v1/transit/00000000-0000-0000-0000-000000000001';
     const ws = new WebSocket(wsUrl);

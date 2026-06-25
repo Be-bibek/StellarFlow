@@ -22,8 +22,8 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   transpilePackages: ['motion'],
   async rewrites() {
-    // In production on Vercel, API requests can be proxied to the external Railway backend
-    // Or you can skip rewrites entirely and use absolute URLs via NEXT_PUBLIC_API_URL in the frontend.
+    // The backendUrl defaults to local development if NEXT_PUBLIC_API_URL is missing.
+    // In production (Vercel), NEXT_PUBLIC_API_URL is explicitly set to the Render backend URL.
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8080';
     return [
       {
