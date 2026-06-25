@@ -54,6 +54,11 @@ pub enum AppError {
     #[error("NetworkTimeout: Horizon/RPC did not respond within deadline")]
     NetworkTimeout,
 
+    /// Stellar tx_bad_seq — the sequence number was ahead/behind the ledger.
+    /// Callers should reset their Redis counter and retry.
+    #[error("BadSequence: tx was rejected by Horizon with tx_bad_seq")]
+    BadSequence,
+
     #[error("StellarHorizonError: {0}")]
     HorizonError(String),
 
@@ -79,6 +84,7 @@ impl AppError {
             AppError::Database(_) => "DATABASE_ERROR",
             AppError::Cache(_) => "CACHE_ERROR",
             AppError::NetworkTimeout => "NETWORK_TIMEOUT",
+            AppError::BadSequence => "BAD_SEQUENCE",
             AppError::HorizonError(_) => "HORIZON_ERROR",
             AppError::Serialization(_) => "SERIALIZATION_ERROR",
             AppError::Internal(_) => "INTERNAL_SERVER_ERROR",
@@ -101,6 +107,7 @@ impl IntoResponse for AppError {
             AppError::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::Cache(_) => StatusCode::SERVICE_UNAVAILABLE,
             AppError::NetworkTimeout => StatusCode::GATEWAY_TIMEOUT,
+            AppError::BadSequence => StatusCode::CONFLICT,
             AppError::HorizonError(_) => StatusCode::BAD_GATEWAY,
             AppError::Serialization(_) => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,

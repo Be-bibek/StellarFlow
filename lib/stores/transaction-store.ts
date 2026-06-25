@@ -193,7 +193,8 @@ interface TransactionState {
   // Pipeline execution
   executeJit: (
     amount: number,
-    breakdown: SourceBreakdown
+    breakdown: SourceBreakdown,
+    destination?: string
   ) => Promise<string | void>;
   clearPipeline: () => void;
   setWsConnected: (connected: boolean) => void;
@@ -294,7 +295,7 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
   // Real Pipeline Execution via WebSocket
   // ─────────────────────────────────────────────────────────────────────────
 
-  executeJit: async (amount, breakdown) => {
+  executeJit: async (amount, breakdown, destination) => {
     if (get().pipelineIsRunning) return;
 
     let data;
@@ -302,7 +303,7 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
       const res = await fetch('/api/gov/approvals/request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount, asset_code: 'native', destination: 'Multiple', purpose: 'Smart Routing Transfer' })
+        body: JSON.stringify({ amount, asset_code: 'native', destination: destination || undefined, purpose: 'Smart Routing Transfer' })
       });
       if (!res.ok) throw new Error('Backend offline');
       data = await res.json();
@@ -351,7 +352,7 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
       orgId: 'org-1',
       amount,
       assetCode: 'native',
-      destination: 'Multiple',
+      destination: destination || 'Multiple',
       sourceBreakdown: breakdown,
       status: 'AUTHORIZING',
       recipientCount: Object.keys(breakdown).length,
@@ -380,7 +381,32 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
         if (data.type === 'TRANSIT_STATE' || data.type === 'TRANSIT_UPDATE') {
           const transferId = data.transfer_id || data.ref_id;
           const status = data.stage || data.new_status;
-          
+
+          // ── CHILD_SETTLED: update childTransfers array in real time ────────
+          if (data.event_type === 'CHILD_SETTLED' && transferId && data.wallet_id && data.stellar_tx_hash) {
+            set((state) => ({
+              transactions: state.transactions.map((tx) => {
+                if (tx.transferId !== transferId) return tx;
+                const existing = tx.childTransfers ?? [];
+                const alreadyHas = existing.some((c) => c.stellarTxHash === data.stellar_tx_hash);
+                if (alreadyHas) return tx;
+                return {
+                  ...tx,
+                  childTransfers: [
+                    ...existing,
+                    {
+                      publicKey: data.wallet_id,
+                      amount: 0,
+                      status: 'SETTLED',
+                      stellarTxHash: data.stellar_tx_hash,
+                      ledgerSequence: data.ledger_sequence ?? null,
+                    },
+                  ],
+                };
+              }),
+            }));
+          }
+
           if (transferId && status) {
             get().updateTransactionStatus(transferId, status, {
               hash: data.stellar_tx_hash,
@@ -423,6 +449,12 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
               }
               return state;
             });
+
+            // After parent settles/fails, re-fetch full transactions from DB
+            // so child hashes are loaded from the authoritative source
+            if (status === 'SETTLED' || status === 'FAILED' || status === 'PARTIAL_FAILURE') {
+              setTimeout(() => get().fetchTransactions(), 800);
+            }
           }
         }
       } catch (e) {

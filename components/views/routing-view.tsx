@@ -92,7 +92,7 @@ export function RoutingView({ onNavigate }: { onNavigate?: (view: 'dashboard' | 
     }, {} as Record<string, string>);
 
     // We don't need to generate a transferId locally anymore, the backend does it
-    const status = await executeJit(jitSimulation.target, breakdown);
+    const status = await executeJit(jitSimulation.target, breakdown, destination);
     
     // Auto-navigate based on Governance gatekeeper outcome
     if (onNavigate) {

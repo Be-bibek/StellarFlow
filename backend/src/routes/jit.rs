@@ -560,6 +560,101 @@ async fn execute_multi_wallet(
 
                 settled_count += 1;
             }
+            Err(AppError::BadSequence) => {
+                // ── tx_bad_seq: Redis counter drifted from the ledger ──────────
+                // Reset Redis to Horizon's authoritative value and retry once.
+                tracing::warn!(
+                    wallet = %alloc.walletName,
+                    "tx_bad_seq detected — resyncing Redis sequence counter and retrying"
+                );
+
+                let retry_result: Result<(), AppError> = async {
+                    let horizon_seq = state.horizon.fetch_sequence(&alloc.publicKey).await?;
+                    let mut redis_conn2 = ConnectionManager::new(state.redis.clone()).await
+                        .map_err(|e| AppError::Cache(format!("Redis conn failed on retry: {e}")))?;
+
+                    // Unconditionally overwrite the stale counter.
+                    sequence_manager::reset_to(&mut redis_conn2, &alloc.publicKey, horizon_seq).await?;
+
+                    // Build a fresh transaction with the corrected sequence (horizon_seq + 1).
+                    let new_seq = sequence_manager::get_and_increment(&mut redis_conn2, &alloc.publicKey).await?;
+                    let new_amount_stroops = bigdecimal_to_stroops(&alloc_bd);
+
+                    // Re-load and decrypt the secret for the retry.
+                    let wallet_secret2 = find_wallet_secret_by_public_key(&state.db, &alloc.publicKey)
+                        .await
+                        .map_err(AppError::Database)?
+                        .ok_or_else(|| AppError::Cache("No secret on retry".into()))?;
+
+                    let plaintext2 = decrypt_secret(&aes_key, &wallet_secret2.encrypted_secret)
+                        .map_err(|e| AppError::Cache(format!("Decrypt failed on retry: {e}")))?;
+
+                    let (_, new_xdr) = build_and_sign_payment(
+                        &plaintext2,
+                        &destination,
+                        new_amount_stroops as i64,
+                        new_seq,
+                    ).map_err(AppError::Internal)?;
+
+                    drop(plaintext2);
+
+                    let retry_res = state.horizon.submit_transaction(&new_xdr).await?;
+
+                    tracing::info!(
+                        wallet = %alloc.walletName,
+                        tx_hash = %retry_res.hash,
+                        ledger  = retry_res.ledger,
+                        "Child transfer settled on Horizon (after seq resync)"
+                    );
+
+                    let _ = advance_child_status(
+                        &state.db, child.id, TransactionStatus::Settled,
+                        Some(&retry_res.hash), Some(retry_res.ledger), None,
+                    ).await;
+
+                    let _ = state.broadcast_tx.send(serde_json::json!({
+                        "type":            "TRANSIT_STATE",
+                        "event_type":      "CHILD_SETTLED",
+                        "ref_id":          parent_tx_id,
+                        "child_id":        child.id,
+                        "wallet_id":       alloc.walletId,
+                        "wallet_name":     alloc.walletName,
+                        "stellar_tx_hash": retry_res.hash,
+                        "ledger_sequence": retry_res.ledger,
+                        "org_id":          org_id,
+                        "timestamp":       chrono::Utc::now().to_rfc3339(),
+                        "note":            "settled after sequence resync",
+                    }));
+
+                    Ok(())
+                }.await;
+
+                match retry_result {
+                    Ok(()) => {
+                        settled_count += 1;
+                    }
+                    Err(e) => {
+                        let reason = format!("Horizon seq-resync retry failed: {e}");
+                        tracing::error!(wallet = %alloc.walletName, error = %e, "Retry after tx_bad_seq failed");
+                        let _ = advance_child_status(
+                            &state.db, child.id, TransactionStatus::Failed,
+                            Some(&hash_hex), None, Some(&reason),
+                        ).await;
+                        let _ = state.broadcast_tx.send(serde_json::json!({
+                            "type":           "TRANSIT_STATE",
+                            "event_type":     "CHILD_FAILED",
+                            "ref_id":         parent_tx_id,
+                            "child_id":       child.id,
+                            "wallet_id":      alloc.walletId,
+                            "wallet_name":    alloc.walletName,
+                            "failure_reason": reason,
+                            "org_id":         org_id,
+                            "timestamp":      chrono::Utc::now().to_rfc3339(),
+                        }));
+                        failed_count += 1;
+                    }
+                }
+            }
             Err(e) => {
                 let reason = format!("Horizon submission failed: {e}");
                 tracing::error!(

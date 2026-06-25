@@ -539,6 +539,7 @@ export function FundingView() {
   const [modal, setModal]         = useState<WalletData | null>(null);
   const [toast, setToast]         = useState<{ msg: string; success: boolean } | null>(null);
   const [lastResult, setLastResult] = useState<FundingResult | null>(null);
+  const [fundingAll, setFundingAll] = useState(false);
 
   // Testnet detection from network passphrase
   const isTestnet = true; // Always testnet for this demo
@@ -581,6 +582,29 @@ export function FundingView() {
     setLastResult(result);
     showToast(result.message, result.success);
     await load(); // Refresh balances + history
+  };
+
+  const fundAll = async () => {
+    if (!isTestnet) return;
+    setFundingAll(true);
+    let successCount = 0;
+    for (const w of wallets) {
+      if (w.balance < 10000) {
+        try {
+          await triggerFriendbot(w.id, "Bulk Funding");
+          successCount++;
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+    setFundingAll(false);
+    if (successCount > 0) {
+      showToast(`Successfully funded ${successCount} wallets`, true);
+      await load();
+    } else {
+      showToast(`No wallets needed funding (all > 10,000 XLM)`, true);
+    }
   };
 
   const totalBalance = wallets.reduce((sum, w) => sum + w.balance, 0);
@@ -643,14 +667,26 @@ export function FundingView() {
             </div>
           </div>
         </div>
-        <button
-          onClick={load}
-          disabled={loading}
-          className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-500 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 rounded-lg transition-colors disabled:opacity-50"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
+        <div className="flex gap-2">
+          {isTestnet && (
+            <button
+              onClick={fundAll}
+              disabled={loading || fundingAll}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border border-amber-500/20 rounded-lg transition-colors disabled:opacity-50"
+            >
+              <FlaskConical className={`w-3.5 h-3.5 ${fundingAll ? 'animate-pulse' : ''}`} />
+              {fundingAll ? 'Funding...' : 'Fund All Wallets'}
+            </button>
+          )}
+          <button
+            onClick={load}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-500 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 rounded-lg transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* KPI Cards */}

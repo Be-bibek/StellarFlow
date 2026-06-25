@@ -280,6 +280,25 @@ impl HorizonClient {
             .await
             .unwrap_or(serde_json::json!({"detail": "Unknown Horizon error"}));
 
+        // Detect tx_bad_seq — Redis counter is out of sync with the ledger.
+        // Return a distinct variant so callers can reset & retry.
+        let tx_code = err_body
+            .pointer("/extras/result_codes/transaction")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+
+        // Log the full error body for debugging
+        tracing::warn!(
+            horizon_status = %status,
+            tx_result_code = %tx_code,
+            full_error = %err_body,
+            "Horizon transaction submission failed"
+        );
+
+        if tx_code == "tx_bad_seq" {
+            return Err(AppError::BadSequence);
+        }
+
         Err(AppError::HorizonError(format!(
             "Horizon HTTP {status}: {}",
             err_body

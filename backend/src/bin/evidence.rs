@@ -81,7 +81,7 @@ async fn main() {
 
     // 3 & 4. Show child_transfers table
     println!("### Proof 3 & 4: `child_transfers` created for route\n");
-    let children: Vec<(String, bigdecimal::BigDecimal, String, String, i64)> = sqlx::query_as(
+    let children: Vec<(String, bigdecimal::BigDecimal, String, Option<String>, Option<i64>)> = sqlx::query_as(
         "SELECT w.wallet_name, ct.amount, ct.status::text, ct.stellar_tx_hash, ct.ledger_sequence 
          FROM child_transfers ct 
          JOIN wallets w ON w.id = ct.wallet_id 
@@ -96,10 +96,12 @@ async fn main() {
         println!("* Source Wallet: {}", name);
         println!("  * Amount: {} XLM", amount);
         println!("  * Status: {}", status);
-        println!("  * Tx Hash: {}", hash);
-        println!("  * Ledger Sequence: {}", ledger);
-        println!("  * Horizon URL: https://horizon-testnet.stellar.org/transactions/{}", hash);
-        println!("  * Stellar Expert URL: https://stellar.expert/explorer/testnet/tx/{}", hash);
+        println!("  * Tx Hash: {}", hash.clone().unwrap_or_else(|| "PENDING/FAILED".to_string()));
+        println!("  * Ledger Sequence: {}", ledger.map(|l| l.to_string()).unwrap_or_else(|| "N/A".to_string()));
+        if let Some(h) = hash {
+            println!("  * Horizon URL: https://horizon-testnet.stellar.org/transactions/{}", h);
+            println!("  * Stellar Expert URL: https://stellar.expert/explorer/testnet/tx/{}", h);
+        }
         println!();
     }
 

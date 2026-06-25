@@ -257,91 +257,172 @@ pub async fn compute_jit_split(
     let mut wallet_balances = wallet_balances;
     wallet_balances.sort_by_key(|(wallet, _)| wallet_priority(&wallet.wallet_type));
 
-    // ── 5. Compute usable liquidity for each wallet ───────────────────────────
+    // ── 5. Compute usable liquidity for every wallet ───────────────────────────
     let zero_bd = BigDecimal::from(0);
-    let mut breakdown: serde_json::Map<String, serde_json::Value> = serde_json::Map::new();
-    let mut remaining = target_amount.clone();
     let mut all_allocations: Vec<JitAllocation> = Vec::new();
 
-    for (wallet, raw_balance) in &wallet_balances {
-        let (usable, stellar_base_reserve, fee_buf, treasury_buf) =
-            compute_usable_liquidity(*raw_balance);
-        let (liquidity_state, exclusion_reason) = classify_liquidity(*raw_balance, usable);
+    // First pass: compute usable liquidity for each wallet and classify it.
+    struct WalletLiq<'a> {
+        wallet:              &'a crate::database::models::Wallet,
+        raw_balance:         f64,
+        usable:              f64,
+        stellar_base_reserve: f64,
+        fee_buf:             f64,
+        treasury_buf:        f64,
+        liquidity_state:     WalletLiquidityState,
+        exclusion_reason:    Option<String>,
+    }
 
-        // Skip wallets that are reserve-locked or have zero usable liquidity
-        if liquidity_state != WalletLiquidityState::Healthy || remaining <= zero_bd {
+    let mut wallet_liq: Vec<WalletLiq<'_>> = wallet_balances
+        .iter()
+        .map(|(wallet, raw_balance)| {
+            let (usable, stellar_base_reserve, fee_buf, treasury_buf) =
+                compute_usable_liquidity(*raw_balance);
+            let (liquidity_state, exclusion_reason) = classify_liquidity(*raw_balance, usable);
+            WalletLiq {
+                wallet,
+                raw_balance: *raw_balance,
+                usable,
+                stellar_base_reserve,
+                fee_buf,
+                treasury_buf,
+                liquidity_state,
+                exclusion_reason,
+            }
+        })
+        .collect();
+
+    // ── 6. Proportional split across ALL healthy wallets ─────────────────────
+    //
+    // Instead of greedy fill (stop once target is met), we distribute the
+    // target amount proportionally across every healthy vault based on each
+    // vault's share of total usable liquidity.
+    //
+    //   wallet_share = wallet_usable / sum_of_all_usable
+    //   wallet_amount = min(wallet_share × target, wallet_usable)
+    //
+    // This guarantees every active vault appears in the transaction, exactly
+    // like the June-21 "5 vault" settlement the user expects to see.
+    // If total usable < target, the algorithm fills as much as possible (no
+    // wallet ever exceeds its own usable cap).
+
+    let total_usable: f64 = wallet_liq
+        .iter()
+        .filter(|w| w.liquidity_state == WalletLiquidityState::Healthy)
+        .map(|w| w.usable)
+        .sum();
+
+    let target_f64 = target_amount.to_f64().unwrap_or(0.0);
+    let mut breakdown: serde_json::Map<String, serde_json::Value> = serde_json::Map::new();
+    let mut total_allocated_f64: f64 = 0.0;
+
+    // Handle the rounding tail: give any leftover cents to the largest wallet.
+    let mut largest_healthy_idx: Option<usize> = None;
+    let mut largest_usable: f64 = 0.0;
+
+    for (idx, wl) in wallet_liq.iter_mut().enumerate() {
+        if wl.liquidity_state != WalletLiquidityState::Healthy || total_usable <= 0.0 {
+            // Reserve-locked or low-liquidity — zero allocation
             all_allocations.push(JitAllocation {
-                walletId:           wallet.id.to_string(),
-                walletName:         wallet.wallet_name.clone(),
-                walletType:         format!("{:?}", wallet.wallet_type).to_uppercase(),
-                publicKey:          wallet.public_key.clone(),
+                walletId:           wl.wallet.id.to_string(),
+                walletName:         wl.wallet.wallet_name.clone(),
+                walletType:         format!("{:?}", wl.wallet.wallet_type).to_uppercase(),
+                publicKey:          wl.wallet.public_key.clone(),
                 amount:             0.0,
                 percentage:         0.0,
-                rawBalance:         *raw_balance,
-                stellarBaseReserve: stellar_base_reserve,
-                feeBuffer:          fee_buf,
-                reserveBuffer:      treasury_buf,
-                usableLiquidity:    usable,
-                liquidityState:     if liquidity_state != WalletLiquidityState::Healthy {
-                    liquidity_state
-                } else {
-                    WalletLiquidityState::Healthy // remaining == 0, allocation satisfied
-                },
-                exclusionReason: if remaining <= zero_bd {
-                    None // Not excluded, just not needed
-                } else {
-                    exclusion_reason
-                },
+                rawBalance:         wl.raw_balance,
+                stellarBaseReserve: wl.stellar_base_reserve,
+                feeBuffer:          wl.fee_buf,
+                reserveBuffer:      wl.treasury_buf,
+                usableLiquidity:    wl.usable,
+                liquidityState:     wl.liquidity_state.clone(),
+                exclusionReason:    wl.exclusion_reason.clone(),
             });
             continue;
         }
 
-        // Safe to allocate from this wallet
-        let usable_bd = BigDecimal::from_str(&format!("{:.7}", usable)).unwrap_or_default();
-        let take = usable_bd.clone().min(remaining.clone());
-        remaining -= &take;
+        // Proportional share — capped at the wallet's own usable liquidity
+        let share = wl.usable / total_usable;
+        let raw_alloc = (share * target_f64).min(wl.usable);
 
-        let take_f64 = take.to_f64().unwrap_or(0.0);
+        // Round to 7 decimal places (Stellar stroop precision)
+        let take_f64 = (raw_alloc * 10_000_000.0).round() / 10_000_000.0;
+        total_allocated_f64 += take_f64;
+
+        // Track largest healthy wallet for rounding correction
+        if wl.usable > largest_usable {
+            largest_usable = wl.usable;
+            largest_healthy_idx = Some(idx);
+        }
+
+        let take_bd = BigDecimal::from_str(&format!("{:.7}", take_f64)).unwrap_or_default();
 
         breakdown.insert(
-            wallet.public_key.clone(),
-            serde_json::json!(take.to_string()),
+            wl.wallet.public_key.clone(),
+            serde_json::json!(take_bd.to_string()),
         );
 
         all_allocations.push(JitAllocation {
-            walletId:           wallet.id.to_string(),
-            walletName:         wallet.wallet_name.clone(),
-            walletType:         format!("{:?}", wallet.wallet_type).to_uppercase(),
-            publicKey:          wallet.public_key.clone(),
+            walletId:           wl.wallet.id.to_string(),
+            walletName:         wl.wallet.wallet_name.clone(),
+            walletType:         format!("{:?}", wl.wallet.wallet_type).to_uppercase(),
+            publicKey:          wl.wallet.public_key.clone(),
             amount:             take_f64,
-            percentage:         0.0, // filled in below
-            rawBalance:         *raw_balance,
-            stellarBaseReserve: stellar_base_reserve,
-            feeBuffer:          fee_buf,
-            reserveBuffer:      treasury_buf,
-            usableLiquidity:    usable,
+            percentage:         0.0, // filled below
+            rawBalance:         wl.raw_balance,
+            stellarBaseReserve: wl.stellar_base_reserve,
+            feeBuffer:          wl.fee_buf,
+            reserveBuffer:      wl.treasury_buf,
+            usableLiquidity:    wl.usable,
             liquidityState:     WalletLiquidityState::Healthy,
             exclusionReason:    None,
         });
     }
 
-    let is_fully_covered = remaining <= zero_bd;
-    let shortfall = remaining.max(zero_bd.clone());
-    let total_covered = target_amount.clone() - shortfall.clone();
-    let total_covered_f64 = total_covered.to_f64().unwrap_or(0.0);
+    // ── 7. Rounding correction ────────────────────────────────────────────────
+    // Due to 7-decimal rounding, total_allocated may be a few stroops short of
+    // target. Add the rounding dust to the largest wallet (it has the most
+    // headroom) without exceeding its usable cap.
+    let rounding_dust = target_f64 - total_allocated_f64;
+    if rounding_dust.abs() > 0.0 {
+        if let Some(li) = largest_healthy_idx {
+            let pub_key = wallet_liq[li].wallet.public_key.clone();
+            let usable_cap = wallet_liq[li].usable;
 
-    // Fill in percentages for contributing wallets
-    for alloc in &mut all_allocations {
-        if alloc.amount > 0.0 && total_covered_f64 > 0.0 {
-            alloc.percentage = (alloc.amount / total_covered_f64) * 100.0;
+            if let Some(alloc) = all_allocations.iter_mut().find(|a| a.publicKey == pub_key) {
+                let corrected = ((alloc.amount + rounding_dust) * 10_000_000.0).round()
+                    / 10_000_000.0;
+                let corrected = corrected.min(usable_cap);
+                let corrected_bd =
+                    BigDecimal::from_str(&format!("{:.7}", corrected)).unwrap_or_default();
+                alloc.amount = corrected;
+                breakdown.insert(
+                    pub_key.clone(),
+                    serde_json::json!(corrected_bd.to_string()),
+                );
+                total_allocated_f64 = total_allocated_f64 - alloc.amount + corrected;
+                alloc.amount = corrected;
+            }
         }
     }
 
+    // ── 8. Fill percentages & coverage summary ────────────────────────────────
+    for alloc in &mut all_allocations {
+        if alloc.amount > 0.0 && total_allocated_f64 > 0.0 {
+            alloc.percentage = (alloc.amount / total_allocated_f64) * 100.0;
+        }
+    }
+
+    let total_allocated_bd =
+        BigDecimal::from_str(&format!("{:.7}", total_allocated_f64)).unwrap_or_default();
+    let is_fully_covered = total_allocated_f64 >= target_f64 - 0.0000001;
+    let shortfall_f64 = (target_f64 - total_allocated_f64).max(0.0);
+    let shortfall = BigDecimal::from_str(&format!("{:.7}", shortfall_f64)).unwrap_or_default();
     let vaults_used = breakdown.len();
 
     Ok(JitSplitResult {
         source_breakdown: serde_json::Value::Object(breakdown),
-        total_covered,
+        total_covered: total_allocated_bd,
         shortfall,
         is_fully_covered,
         vaults_used,
