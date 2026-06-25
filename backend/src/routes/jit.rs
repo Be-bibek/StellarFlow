@@ -150,10 +150,10 @@ pub async fn simulate_jit(
 // Execute JIT — Phase C.5: Real Multi-Wallet Execution
 // ─────────────────────────────────────────────────────────────────────────────
 
-pub async fn execute_jit(
-    State(state): State<Arc<AppState>>,
-    Json(payload): Json<ExecuteJitRequest>,
-) -> Result<Json<ExecuteJitResponse>, AppError> {
+pub async fn execute_jit_internal(
+    state: Arc<AppState>,
+    payload: ExecuteJitRequest,
+) -> Result<ExecuteJitResponse, AppError> {
     let org_id = Uuid::parse_str("00000000-0000-0000-0000-000000000001")
         .unwrap_or_else(|_| Uuid::nil());
 
@@ -236,7 +236,7 @@ pub async fn execute_jit(
         ).await;
     });
 
-    Ok(Json(ExecuteJitResponse {
+    Ok(ExecuteJitResponse {
         transfer_id: tx.transfer_id,
         status: "AUTHORIZING".to_string(),
         message: format!(
@@ -244,7 +244,7 @@ pub async fn execute_jit(
             child_count
         ),
         child_count,
-    }))
+    })
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -568,6 +568,28 @@ async fn execute_multi_wallet(
                     error = %e,
                     "Child transfer rejected by Horizon"
                 );
+
+                // --- NEW CODE: Sequence Recovery ---
+                if let Ok(correct_seq) = state.horizon.fetch_sequence(&alloc.publicKey).await {
+                    if let Ok(mut redis_conn) = redis::aio::ConnectionManager::new(state.redis.clone()).await {
+                        let _ = crate::stellar::sequence_manager::reset_to(&mut redis_conn, &alloc.publicKey, correct_seq).await;
+                        
+                        let _ = sqlx::query(
+                            "INSERT INTO audit_logs (org_id, transfer_id, actor_id, action, metadata) VALUES ($1, $2, 'system', 'SEQUENCE_RECOVERY', $3)"
+                        )
+                        .bind(org_id)
+                        .bind(&parent_tx_id)
+                        .bind(serde_json::json!({
+                            "wallet_id": alloc.walletId,
+                            "wallet_name": alloc.walletName,
+                            "public_key": alloc.publicKey,
+                            "recovered_sequence": correct_seq,
+                            "error": e.to_string()
+                        }))
+                        .execute(&state.db).await;
+                    }
+                }
+                // --- END NEW CODE ---
 
                 let _ = advance_child_status(
                     &state.db,

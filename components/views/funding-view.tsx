@@ -2,11 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import {
-  Zap, Wallet, RefreshCw, CheckCircle2, AlertTriangle,
-  ArrowDownToLine, Clock, TrendingUp, Activity, Shield,
-  PlusCircle, Filter, Download, FlaskConical
-} from 'lucide-react';
+import { FlaskConical, TrendingUp, Wallet, AlertTriangle, CheckCircle2, RefreshCw, X, Shield, ArrowRight, ShieldAlert, ArrowDownLeft, Clock, Search, Download, ArrowDownToLine, Zap, Activity, PlusCircle, Filter } from 'lucide-react';
+import { BentoCard } from '@/components/ui/bento-card';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -587,12 +584,11 @@ export function FundingView() {
             bg: lowWallets > 0 ? 'bg-amber-500/10' : 'bg-emerald-500/10',
           },
         ].map((kpi, i) => (
-          <motion.div
+          <BentoCard
             key={kpi.label}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.08 }}
-            className="bg-white dark:bg-[#110E1C] border border-slate-200 dark:border-white/10 rounded-2xl p-5"
+            delay={i * 0.08}
+            className="flex flex-col p-5"
+            noPadding
           >
             <div className="flex items-center gap-3 mb-3">
               <div className={`p-2 rounded-xl ${kpi.bg}`}>
@@ -601,7 +597,7 @@ export function FundingView() {
               <p className="text-xs text-slate-500 font-medium">{kpi.label}</p>
             </div>
             <p className={`text-2xl font-bold tabular-nums ${kpi.color}`}>{kpi.value}</p>
-          </motion.div>
+          </BentoCard>
         ))}
       </div>
 
@@ -660,7 +656,7 @@ export function FundingView() {
           transition={{ duration: 0.18 }}
         >
           {activeTab === 'overview' && (
-            <div className="bg-white dark:bg-[#110E1C] border border-slate-200 dark:border-white/10 rounded-2xl p-6">
+            <BentoCard delay={0.1} className="flex flex-col p-6">
               <div className="flex items-center gap-3 mb-5">
                 <div className="p-2 rounded-xl bg-cyan-500/10">
                   <Activity className="w-4 h-4 text-cyan-400" />
@@ -677,11 +673,11 @@ export function FundingView() {
               ) : (
                 <WalletGrid wallets={wallets} onFund={setModal} />
               )}
-            </div>
+            </BentoCard>
           )}
 
           {activeTab === 'history' && (
-            <div className="bg-white dark:bg-[#110E1C] border border-slate-200 dark:border-white/10 rounded-2xl p-6">
+            <BentoCard delay={0.1} className="flex flex-col p-6">
               <div className="flex items-center gap-3 mb-5">
                 <div className="p-2 rounded-xl bg-indigo-500/10">
                   <Shield className="w-4 h-4 text-indigo-400" />
@@ -698,7 +694,7 @@ export function FundingView() {
               ) : (
                 <FundingHistoryTable history={history} />
               )}
-            </div>
+            </BentoCard>
           )}
         </motion.div>
       </AnimatePresence>

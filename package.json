@@ -12,11 +12,14 @@
   "dependencies": {
     "@google/genai": "^2.4.0",
     "@hookform/resolvers": "^5.2.1",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.6.1",
     "autoprefixer": "^10.4.21",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
     "firebase": "^12.15.0",
+    "gsap": "^3.15.0",
     "lucide-react": "^0.553.0",
     "motion": "^12.23.24",
     "next": "^15.4.9",
@@ -25,7 +28,9 @@
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "recharts": "^3.8.1",
+    "stellar-sdk": "^13.3.0",
     "tailwind-merge": "^3.3.1",
+    "three": "^0.185.0",
     "zustand": "^5.0.14"
   },
   "devDependencies": {
@@ -34,6 +39,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "^0.184.1",
     "eslint": "9.39.1",
     "eslint-config-next": "16.0.8",
     "firebase-tools": "^15.0.0",

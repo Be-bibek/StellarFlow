@@ -4,13 +4,14 @@ import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Search, Download, ArrowUpRight, ArrowDownRight, RefreshCw, Layers,
-  Clock, CheckCircle2, AlertTriangle, Zap, ChevronDown, ChevronUp,
+  Clock, CheckCircle2, AlertTriangle, Zap, ChevronDown, ChevronUp, ExternalLink,
 } from 'lucide-react';
 import {
   useTransactionStore,
   StellarTransaction,
   TransactionStatus,
 } from '@/lib/stores/transaction-store';
+import { BentoCard } from '@/components/ui/bento-card';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -56,24 +57,12 @@ function TxTypeIcon({ tx }: { tx: StellarTransaction }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Hook: track mouse position for spotlight
 // ─────────────────────────────────────────────────────────────────────────────
-function useSpotlight<T extends HTMLElement>() {
-  const ref = useRef<T>(null);
-  const [pos, setPos] = useState({ x: 0, y: 0, inside: false });
-  const onMove = useCallback((e: React.MouseEvent) => {
-    const el = ref.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    setPos({ x: e.clientX - r.left, y: e.clientY - r.top, inside: true });
-  }, []);
-  const onLeave = useCallback(() => setPos((p) => ({ ...p, inside: false })), []);
-  return { ref, pos, onMove, onLeave };
-}
+// Removed useSpotlight as BentoCard provides it natively
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Transaction row card — premium interactive
 // ─────────────────────────────────────────────────────────────────────────────
 function TxRowCard({ tx, index }: { tx: StellarTransaction; index: number }) {
-  const { ref, pos, onMove, onLeave } = useSpotlight<HTMLDivElement>();
   const [isPressed, setIsPressed] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
@@ -98,15 +87,13 @@ function TxRowCard({ tx, index }: { tx: StellarTransaction; index: number }) {
   const breakdownEntries = Object.entries(tx.sourceBreakdown);
 
   return (
-    <motion.div
-      ref={ref}
+    <BentoCard
       layout
+      noPadding
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.04, duration: 0.25 }}
       whileTap={{ scale: 0.992, transition: { type: 'spring', stiffness: 600, damping: 30 } }}
-      onMouseMove={onMove}
-      onMouseLeave={onLeave}
       onMouseDown={() => setIsPressed(true)}
       onMouseUp={() => { setIsPressed(false); setExpanded((p) => !p); }}
       className={`relative rounded-xl overflow-hidden cursor-pointer select-none transition-all duration-150 border ${
@@ -114,22 +101,7 @@ function TxRowCard({ tx, index }: { tx: StellarTransaction; index: number }) {
           ? 'border-purple-500/40 shadow-[0_0_0_2px_rgba(124,58,237,0.2),_0_4px_20px_rgba(0,0,0,0.1)] dark:shadow-[0_0_0_2px_rgba(124,58,237,0.2),_0_4px_20px_rgba(0,0,0,0.35)]' 
           : 'border-slate-200 dark:border-white/5 shadow-sm dark:shadow-[0_2px_12px_rgba(0,0,0,0.25)]'
       }`}
-      style={{
-        background: 'linear-gradient(135deg, rgba(124,58,237,0.02) 0%, transparent 100%)',
-        backdropFilter: 'blur(12px)',
-      }}
     >
-      <div className="absolute inset-0 bg-white/40 dark:bg-white/5" />
-
-      {/* Cursor spotlight */}
-      <div
-        className="pointer-events-none absolute inset-0 z-0"
-        style={{
-          opacity: pos.inside ? 1 : 0,
-          transition: 'opacity 0.3s',
-          background: `radial-gradient(280px circle at ${pos.x}px ${pos.y}px, rgba(124,58,237,0.11) 0%, transparent 70%)`,
-        }}
-      />
 
       {/* Main row */}
       <div className="relative z-10 px-5 py-4">
@@ -212,16 +184,36 @@ function TxRowCard({ tx, index }: { tx: StellarTransaction; index: number }) {
                     Source Vault Breakdown
                   </p>
                   <div className="flex flex-col gap-1.5">
-                    {breakdownEntries.map(([key, val]) => (
-                      <div key={key} className="flex items-center justify-between">
-                        <span className="text-[10px] font-mono text-slate-600 dark:text-white/40">
-                          {key.slice(0, 14)}…
-                        </span>
-                        <span className="text-[11px] font-mono text-cyan-600 dark:text-cyan-400">
-                          {parseFloat(val).toLocaleString()} XLM
-                        </span>
-                      </div>
-                    ))}
+                    {breakdownEntries.map(([key, val]) => {
+                      const child = (tx as any).childTransfers?.find((c: any) => c.publicKey === key);
+                      return (
+                        <div key={key} className="flex flex-col gap-1 mb-1.5 p-2 bg-slate-100/50 dark:bg-white/[0.02] rounded-md border border-slate-200 dark:border-white/5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-mono text-slate-600 dark:text-white/40">
+                              {key.slice(0, 14)}…
+                            </span>
+                            <span className="text-[11px] font-mono text-cyan-600 dark:text-cyan-400">
+                              {parseFloat(val).toLocaleString()} XLM
+                            </span>
+                          </div>
+                          {child?.stellarTxHash && (
+                            <div className="flex items-center justify-between mt-1 pt-1 border-t border-slate-200 dark:border-white/5">
+                              <span className="text-[9px] font-mono text-purple-600 dark:text-purple-400 flex items-center gap-1.5">
+                                #{child.ledgerSequence} · {child.stellarTxHash.slice(0, 12)}…
+                              </span>
+                              <a 
+                                href={`https://stellar.expert/explorer/testnet/tx/${child.stellarTxHash}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex items-center gap-1 text-[9px] font-medium uppercase tracking-wider text-blue-600 dark:text-blue-400 hover:text-blue-500 transition-colors"
+                              >
+                                View Explorer <ExternalLink className="w-3 h-3" />
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -262,7 +254,7 @@ function TxRowCard({ tx, index }: { tx: StellarTransaction; index: number }) {
           />
         )}
       </AnimatePresence>
-    </motion.div>
+    </BentoCard>
   );
 }
 

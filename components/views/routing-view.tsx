@@ -82,7 +82,7 @@ export function RoutingView({ onNavigate }: { onNavigate?: (view: 'dashboard' | 
     await simulateJitSplit(amount);
   }, [targetInput, simulateJitSplit, clearSimulation]);
 
-  const handleExecute = useCallback(() => {
+  const handleExecute = useCallback(async () => {
     if (!jitSimulation || pipelineIsRunning) return;
 
     // Convert array of allocations to SourceBreakdown object
@@ -92,11 +92,15 @@ export function RoutingView({ onNavigate }: { onNavigate?: (view: 'dashboard' | 
     }, {} as Record<string, string>);
 
     // We don't need to generate a transferId locally anymore, the backend does it
-    executeJit(jitSimulation.target, breakdown);
+    const status = await executeJit(jitSimulation.target, breakdown);
     
-    // Auto-navigate to Transit view to watch the execution
+    // Auto-navigate based on Governance gatekeeper outcome
     if (onNavigate) {
-      onNavigate('transit');
+      if (status === 'PENDING_APPROVAL') {
+        onNavigate('multisig');
+      } else {
+        onNavigate('transit');
+      }
     }
   }, [jitSimulation, pipelineIsRunning, executeJit, onNavigate]);
 

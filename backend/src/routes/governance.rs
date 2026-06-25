@@ -107,41 +107,19 @@ async fn trigger_jit_execution(
         serde_json::json!({ "triggered_by": actor_id }),
     ).await;
 
-    // Call the existing JIT execution engine via internal HTTP
-    // The backend's own port is known from the config bind_addr.
-    let jit_url = format!(
-        "http://127.0.0.1:{}/api/v1/jit/execute",
-        state.config.bind_addr.split(':').last().unwrap_or("8080")
-    );
+    let payload = crate::routes::jit::ExecuteJitRequest {
+        target_amount: amount.to_string().parse::<f64>().unwrap_or(0.0),
+        asset_code:    Some(asset_code.to_string()),
+        destination:   Some(destination.to_string()),
+        transfer_id:   Some(transfer_id.to_string()),
+    };
 
-    let body = serde_json::json!({
-        "target_amount": amount.to_string().parse::<f64>().unwrap_or(0.0),
-        "asset_code":    asset_code,
-        "destination":   destination,
-        "transfer_id":   transfer_id,
-    });
-
-    let client = reqwest::Client::new();
-    match client.post(&jit_url).json(&body).send().await {
-        Ok(resp) if resp.status().is_success() => {
+    match crate::routes::jit::execute_jit_internal(Arc::clone(&state), payload).await {
+        Ok(_) => {
             tracing::info!(
                 transfer_id = transfer_id,
                 "JIT execution triggered successfully from governance layer"
             );
-        }
-        Ok(resp) => {
-            let status = resp.status();
-            tracing::error!(
-                transfer_id = transfer_id,
-                http_status = %status,
-                "JIT execution returned non-success from governance layer"
-            );
-            let _ = set_governance_status(&state.db, gov_req_id, "FAILED").await;
-            audit(
-                &state.db, org_id, Some(transfer_id), "system",
-                audit_action::EXECUTION_FAILED,
-                serde_json::json!({ "reason": format!("JIT returned HTTP {}", status) }),
-            ).await;
         }
         Err(e) => {
             tracing::error!(

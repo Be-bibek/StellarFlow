@@ -9,6 +9,7 @@ import {
   StellarTransaction,
   STAGE_ORDER,
 } from '@/lib/stores/transaction-store';
+import { BentoCard } from '@/components/ui/bento-card';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -89,23 +90,7 @@ function StatusBadge({ status }: { status: TransactionStatus }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Hook: track mouse position relative to an element
 // ─────────────────────────────────────────────────────────────────────────────
-function useMousePosition<T extends HTMLElement>() {
-  const ref = useRef<T>(null);
-  const [pos, setPos] = useState({ x: 0, y: 0, inside: false });
-
-  const onMouseMove = useCallback((e: React.MouseEvent) => {
-    const el = ref.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    setPos({ x: e.clientX - rect.left, y: e.clientY - rect.top, inside: true });
-  }, []);
-
-  const onMouseLeave = useCallback(() => {
-    setPos((p) => ({ ...p, inside: false }));
-  }, []);
-
-  return { ref, pos, onMouseMove, onMouseLeave };
-}
+// Removed useMousePosition as BentoCard handles it natively
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Session card with cursor spotlight + click press animation + rich detail
@@ -128,7 +113,6 @@ function SessionCard({
   };
   pipeline?: TransitPipeline | null;
 }) {
-  const { ref, pos, onMouseMove, onMouseLeave } = useMousePosition<HTMLDivElement>();
   const [isPressed, setIsPressed] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
@@ -146,14 +130,12 @@ function SessionCard({
   const breakdownEntries = session.breakdown ? Object.entries(session.breakdown) : null;
 
   return (
-    <motion.div
-      ref={ref}
+    <BentoCard
       layout
+      noPadding
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       whileTap={{ scale: 0.984, transition: { type: 'spring', stiffness: 600, damping: 30 } }}
-      onMouseMove={onMouseMove}
-      onMouseLeave={onMouseLeave}
       onMouseDown={() => setIsPressed(true)}
       onMouseUp={() => { setIsPressed(false); setExpanded((p) => !p); }}
       className={`rounded-2xl relative overflow-hidden cursor-pointer select-none transition-all duration-200 border ${
@@ -161,22 +143,7 @@ function SessionCard({
           ? 'border-purple-500/50 shadow-[0_0_0_2px_rgba(124,58,237,0.2),_0_8px_32px_rgba(0,0,0,0.15)] dark:shadow-[0_0_0_2px_rgba(124,58,237,0.2),_0_8px_32px_rgba(0,0,0,0.4)]'
           : 'border-slate-200 dark:border-white/10 shadow-sm dark:shadow-[0_4px_24px_rgba(0,0,0,0.3)]'
       }`}
-      style={{
-        background: 'linear-gradient(135deg, rgba(124,58,237,0.02) 0%, transparent 100%)',
-        backdropFilter: 'blur(20px)',
-      }}
     >
-      <div className="absolute inset-0 bg-white/40 dark:bg-white/5 pointer-events-none" />
-
-      {/* ── Cursor spotlight ─────────────────────────────────────────────── */}
-      <div
-        className="pointer-events-none absolute inset-0 z-0 transition-opacity duration-300"
-        style={{
-          opacity: pos.inside ? 1 : 0,
-          background: `radial-gradient(320px circle at ${pos.x}px ${pos.y}px, rgba(124,58,237,0.13) 0%, transparent 70%)`,
-        }}
-      />
-
       {/* ── Content ──────────────────────────────────────────────────────── */}
       <div className="relative z-10 p-6">
 
@@ -380,7 +347,7 @@ function SessionCard({
           />
         )}
       </AnimatePresence>
-    </motion.div>
+    </BentoCard>
   );
 }
 

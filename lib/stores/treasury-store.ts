@@ -62,6 +62,16 @@ export interface JitSimulationResult {
   timestamp: number;
 }
 
+/** Unified treasury KPIs fetched from backend */
+export interface TreasurySummary {
+  total_equity: number;
+  available_cash: number;
+  running_liabilities: number;
+  wallet_count: number;
+  low_balance_wallets: number;
+  daily_volume: number;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Priority ordering (mirrors Rust jit_aggregator.rs wallet_priority fn)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -151,6 +161,9 @@ interface TreasuryState {
   totalBalance: number;
   activeWallets: Wallet[];
 
+  // Global summary KPI data
+  summary: TreasurySummary | null;
+
   // JIT simulation
   jitSimulation: JitSimulationResult | null;
   jitIsRunning: boolean;
@@ -158,6 +171,7 @@ interface TreasuryState {
   // Actions
   loadWallets: (wallets?: Wallet[]) => void;
   fetchWallets: () => Promise<void>;
+  fetchSummary: () => Promise<void>;
   updateBalance: (walletId: string, newBalance: number) => void;
   simulateJitSplit: (targetAmount: number, assetCode?: string) => Promise<JitSimulationResult>;
   clearSimulation: () => void;
@@ -245,6 +259,8 @@ export const useTreasuryStore = create<TreasuryState>((set, get) => ({
     return get().wallets.filter((w) => w.isActive);
   },
 
+  summary: null,
+
   jitSimulation: null,
   jitIsRunning: false,
 
@@ -281,6 +297,17 @@ export const useTreasuryStore = create<TreasuryState>((set, get) => ({
     } catch (e) {
       console.warn("Backend unavailable, keeping demo wallets.", e);
       set({ isLoading: false });
+    }
+  },
+
+  fetchSummary: async () => {
+    try {
+      const res = await fetch('/api/treasury/summary');
+      if (!res.ok) throw new Error('Failed to fetch treasury summary');
+      const summary = await res.json();
+      set({ summary });
+    } catch (e) {
+      console.warn("Failed to fetch treasury summary", e);
     }
   },
 

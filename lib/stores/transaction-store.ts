@@ -33,6 +33,14 @@ export interface SourceBreakdown {
   [publicKey: string]: string; // amount as decimal string
 }
 
+export interface ChildTransfer {
+  publicKey: string;
+  amount: number;
+  status: string;
+  stellarTxHash: string | null;
+  ledgerSequence: number | null;
+}
+
 export interface StellarTransaction {
   id: string;
   transferId: string;
@@ -52,6 +60,7 @@ export interface StellarTransaction {
   settledAt?: string;
   failedAt?: string;
   failureReason?: string;
+  childTransfers?: ChildTransfer[];
 }
 
 /** One stage in the transit pipeline animation */
@@ -185,7 +194,7 @@ interface TransactionState {
   executeJit: (
     amount: number,
     breakdown: SourceBreakdown
-  ) => Promise<void>;
+  ) => Promise<string | void>;
   clearPipeline: () => void;
   setWsConnected: (connected: boolean) => void;
   connectWebSocket: () => void;
@@ -214,21 +223,32 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
       const res = await fetch('/api/transactions');
       if (!res.ok) throw new Error('Failed to fetch transactions');
       const data = await res.json();
-      const mapped = data.map((tx: any) => ({
-        ...tx,
-        orgId: "org-1",
-        transferId: tx.transfer_id,
-        assetCode: tx.asset_code,
-        destination: tx.recipient_count > 1 ? "Multiple" : "Unknown",
-        sourceBreakdown: tx.source_breakdown,
-        stellarTxHash: tx.stellar_tx_hash,
-        ledgerSequence: tx.ledger_sequence,
-        recipientCount: tx.recipient_count,
-        createdAt: tx.created_at,
-        settledAt: tx.status === 'SETTLED' ? tx.updated_at : undefined,
-        failedAt: tx.status === 'FAILED' ? tx.updated_at : undefined,
-      }));
-      set({ transactions: mapped, isLoading: false });
+      set({
+        transactions: data.map((t: any) => ({
+          id: t.id,
+          transferId: t.transfer_id,
+          orgId: "org-1",
+          status: t.status,
+          amount: t.amount,
+          assetCode: t.asset_code,
+          destination: t.recipient_count > 1 ? "Multiple" : "Unknown",
+          createdAt: t.created_at,
+          sourceBreakdown: t.source_breakdown,
+          stellarTxHash: t.stellar_tx_hash,
+          ledgerSequence: t.ledger_sequence,
+          recipientCount: t.recipient_count,
+          settledAt: t.settled_at,
+          failedAt: t.failed_at,
+          childTransfers: t.child_transfers?.map((c: any) => ({
+            publicKey: c.public_key,
+            amount: c.amount,
+            status: c.status,
+            stellarTxHash: c.stellar_tx_hash,
+            ledgerSequence: c.ledger_sequence,
+          })),
+        })),
+        isLoading: false,
+      });
     } catch (e) {
       console.warn("Backend unavailable, keeping demo transactions.", e);
       set({ isLoading: false });
@@ -277,19 +297,23 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
   executeJit: async (amount, breakdown) => {
     if (get().pipelineIsRunning) return;
 
-    // Call real backend execution
-    const res = await fetch('/api/jit/execute', {
+    // Call Governance request API instead of JIT direct execution
+    const res = await fetch('/api/gov/approvals/request', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ target_amount: amount, asset_code: 'native' })
+      body: JSON.stringify({ amount: amount, asset_code: 'native', destination: 'Multiple', purpose: 'Smart Routing Transfer' })
     });
 
     if (!res.ok) {
-      throw new Error("Failed to execute JIT");
+      throw new Error("Failed to request approval");
     }
 
     const data = await res.json();
     const transferId = data.transfer_id;
+
+    if (data.status === 'PENDING_APPROVAL') {
+      return 'PENDING_APPROVAL';
+    }
 
     // Initialise pipeline with all stages pending
     const initialStages: PipelineStage[] = PIPELINE_STAGES.map((s) => ({
@@ -320,6 +344,8 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
       recipientCount: Object.keys(breakdown).length,
       createdAt: new Date().toISOString(),
     });
+
+    return 'AUTO_EXECUTING';
   },
 
   connectWebSocket: () => {

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { BentoCard } from '@/components/ui/bento-card';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   ShieldCheck, Clock, CheckCircle2, XCircle, FileText,
@@ -242,7 +243,7 @@ function ApprovalInbox({ onNavigateToAudit }: { onNavigateToAudit: (tid: string)
       </AnimatePresence>
 
       {/* Submit Transfer for Approval */}
-      <div className="bg-white dark:bg-[#110E1C] border border-slate-200 dark:border-white/10 rounded-2xl p-6">
+      <BentoCard className="flex flex-col p-6">
         <div className="flex items-center gap-3 mb-5">
           <div className="p-2 rounded-xl bg-violet-500/10">
             <Send className="w-5 h-5 text-violet-400" />
@@ -315,10 +316,10 @@ function ApprovalInbox({ onNavigateToAudit }: { onNavigateToAudit: (tid: string)
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
+      </BentoCard>
 
       {/* Pending Approvals */}
-      <div className="bg-white dark:bg-[#110E1C] border border-slate-200 dark:border-white/10 rounded-2xl p-6">
+      <BentoCard delay={0.1} className="flex flex-col p-6">
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-amber-500/10">
@@ -421,7 +422,7 @@ function ApprovalInbox({ onNavigateToAudit }: { onNavigateToAudit: (tid: string)
             })}
           </div>
         )}
-      </div>
+      </BentoCard>
     </div>
   );
 }
@@ -453,7 +454,7 @@ function ApprovalTimeline() {
   return (
     <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
       {/* Request list */}
-      <div className="xl:col-span-2 bg-white dark:bg-[#110E1C] border border-slate-200 dark:border-white/10 rounded-2xl p-6">
+      <BentoCard delay={0.1} className="xl:col-span-2 flex flex-col p-6">
         <div className="flex items-center gap-3 mb-5">
           <div className="p-2 rounded-xl bg-blue-500/10">
             <List className="w-5 h-5 text-blue-400" />
@@ -493,10 +494,10 @@ function ApprovalTimeline() {
             ))}
           </div>
         )}
-      </div>
+      </BentoCard>
 
       {/* Timeline detail */}
-      <div className="xl:col-span-3 bg-white dark:bg-[#110E1C] border border-slate-200 dark:border-white/10 rounded-2xl p-6">
+      <BentoCard delay={0.2} className="xl:col-span-3 flex flex-col p-6">
         {!selected ? (
           <div className="flex flex-col items-center justify-center h-full py-20 gap-3 text-center">
             <ChevronRight className="w-8 h-8 text-slate-400/40" />
@@ -583,7 +584,7 @@ function ApprovalTimeline() {
             )}
           </div>
         )}
-      </div>
+      </BentoCard>
     </div>
   );
 }
@@ -624,7 +625,7 @@ function AuditLogViewer({ initialTransferId }: { initialTransferId?: string }) {
   const allActions = Array.from(new Set(logs.map(l => l.action)));
 
   return (
-    <div className="bg-white dark:bg-[#110E1C] border border-slate-200 dark:border-white/10 rounded-2xl p-6 space-y-5">
+    <BentoCard delay={0.1} className="flex flex-col space-y-5 p-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-indigo-500/10">
@@ -718,7 +719,7 @@ function AuditLogViewer({ initialTransferId }: { initialTransferId?: string }) {
           </table>
         </div>
       )}
-    </div>
+    </BentoCard>
   );
 }
 

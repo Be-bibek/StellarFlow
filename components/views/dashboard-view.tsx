@@ -11,19 +11,37 @@ export function DashboardView() {
   const wallets = useTreasuryStore((s) => s.wallets);
   const totalBalance = useTreasuryStore((s) => s.totalBalance);
   const fetchWallets = useTreasuryStore((s) => s.fetchWallets);
+  const fetchSummary = useTreasuryStore((s) => s.fetchSummary);
+  const summary = useTreasuryStore((s) => s.summary);
   
   const transactions = useTransactionStore((s) => s.transactions);
   const fetchTransactions = useTransactionStore((s) => s.fetchTransactions);
 
   useEffect(() => {
     fetchWallets();
+    fetchSummary();
     fetchTransactions();
-  }, [fetchWallets, fetchTransactions]);
+  }, [fetchWallets, fetchSummary, fetchTransactions]);
 
   const totalEquityString = new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
-  }).format(totalBalance);
+  }).format(summary?.total_equity || totalBalance);
+
+  const availableCashString = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(summary?.available_cash || totalBalance);
+
+  const dailyVolumeString = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(summary?.daily_volume || 45200);
+
+  const runningLiabilitiesString = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(summary?.running_liabilities || 124000);
 
   const displayWallets = wallets.slice(0, 4);
   const displayFeed = transactions.slice(0, 5);
@@ -43,7 +61,7 @@ export function DashboardView() {
             </div>
             <div className="flex items-center gap-2 mt-4 text-xs">
               <span className="text-emerald-600 dark:text-emerald-400 flex items-center bg-emerald-500/10 px-2 py-0.5 rounded-md font-mono">
-                <ArrowUpRight className="w-3 h-3 mr-1" /> +$45,200.00
+                <ArrowUpRight className="w-3 h-3 mr-1" /> +{dailyVolumeString}
               </span>
               <span className="text-slate-500 tracking-tight">24h volume</span>
             </div>
@@ -52,7 +70,7 @@ export function DashboardView() {
 
         <BentoCard delay={0.1} className="flex flex-col justify-between">
           <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Sourced Available Cash</span>
-          <div className="text-2xl font-bold mt-2 text-slate-900 dark:text-[#F8FAFC]">{totalEquityString}</div>
+          <div className="text-2xl font-bold mt-2 text-slate-900 dark:text-[#F8FAFC]">{availableCashString}</div>
           <div className="mt-4 h-1 w-full bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden">
             <div className="h-full bg-blue-600 dark:bg-indigo-500 w-[60%]" />
           </div>
@@ -60,7 +78,7 @@ export function DashboardView() {
 
         <BentoCard delay={0.15} className="flex flex-col justify-between">
           <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Running Liabilities</span>
-          <div className="text-2xl font-bold text-red-500 dark:text-red-400 mt-2">-$124,000.00</div>
+          <div className="text-2xl font-bold text-red-500 dark:text-red-400 mt-2">-{runningLiabilitiesString}</div>
           <div className="mt-4 text-[10px] text-slate-500">Escrowed reserves covered</div>
         </BentoCard>
       </div>

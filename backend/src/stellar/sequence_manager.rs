@@ -211,3 +211,60 @@ pub async fn delete(
     tracing::info!(channel = %public_key, "Sequence counter deleted");
     Ok(())
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Startup Self-Healing
+// ─────────────────────────────────────────────────────────────────────────────
+
+use crate::stellar::HorizonClient;
+use sqlx::PgPool;
+
+/// Verify and heal sequence numbers for all active treasury wallets on startup.
+pub async fn verify_and_heal_all(
+    pool: &PgPool,
+    mut redis: ConnectionManager,
+    horizon: &HorizonClient,
+) -> Result<(), AppError> {
+    use sqlx::Row;
+    let wallets = sqlx::query(
+        "SELECT public_key, wallet_name, id FROM wallets WHERE is_active = true"
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|e| AppError::Database(e))?;
+
+    for row in wallets {
+        let public_key: String = row.get("public_key");
+        let wallet_name: String = row.get("wallet_name");
+        let id: uuid::Uuid = row.get("id");
+
+        let redis_seq = peek(&mut redis, &public_key).await?.unwrap_or(0);
+        let horizon_seq = horizon.fetch_sequence(&public_key).await.unwrap_or(0);
+
+        if redis_seq != horizon_seq && horizon_seq > 0 {
+            reset_to(&mut redis, &public_key, horizon_seq).await?;
+            
+            let _ = sqlx::query(
+                "INSERT INTO audit_logs (org_id, actor_id, action, metadata) VALUES ((SELECT org_id FROM wallets WHERE id = $1), 'system', 'SEQUENCE_RESYNC_ON_STARTUP', $2)"
+            )
+            .bind(id)
+            .bind(serde_json::json!({
+                "wallet_id": id,
+                "wallet_name": wallet_name,
+                "public_key": public_key,
+                "old_redis_sequence": redis_seq,
+                "new_horizon_sequence": horizon_seq
+            }))
+            .execute(pool).await;
+            
+            tracing::warn!(
+                wallet = %wallet_name,
+                redis_seq = redis_seq,
+                horizon_seq = horizon_seq,
+                "Sequence resync on startup"
+            );
+        }
+    }
+    
+    Ok(())
+}
