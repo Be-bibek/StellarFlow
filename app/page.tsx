@@ -40,6 +40,7 @@ import { useTransactionStore } from '@/lib/stores/transaction-store';
 
 import { BootSequence } from '@/components/BootSequence';
 import { IntroScreen } from '@/components/IntroScreen';
+import { RecruiterModals } from '@/components/RecruiterModals';
 
 type ActiveView = 'dashboard' | 'history' | 'treasury' | 'routing' | 'batch' | 'transit' | 'multisig' | 'analytics' | 'settings' | 'governance' | 'funding';
 
@@ -218,6 +219,7 @@ export default function AppShell() {
 
   return (
     <div className="flex h-screen w-full bg-transparent overflow-hidden">
+      <RecruiterModals />
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex w-64 flex-shrink-0 border-r border-slate-200 dark:border-white/10 bg-white dark:bg-[#08060D] flex-col z-20 transition-colors duration-500">
         <div className="p-4 border-b border-slate-200 dark:border-white/10 flex flex-col gap-4 transition-colors duration-500">
