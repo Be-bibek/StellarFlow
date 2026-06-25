@@ -128,6 +128,15 @@ async fn main() -> anyhow::Result<()> {
 
     tracing::info!(max_connections = cfg.db_max_connections, "PostgreSQL pool established");
 
+    // ── Phase A/B: Base Schema Setup ─────────────────────────────────────────
+    // Run the base schema to ensure tables like 'organizations' exist on fresh DBs
+    let schema_sql = include_str!("database/schema.sql");
+    if let Err(e) = sqlx::raw_sql(schema_sql).execute(&db_pool).await {
+        tracing::warn!(error = %e, "Base schema warning (may already be applied)");
+    } else {
+        tracing::info!("Base schema applied successfully.");
+    }
+
     // ── Phase C.5: Run idempotent migration before seeding ───────────────────
     // This adds wallet_secrets, child_transfers tables and PARTIAL_FAILURE enum
     // if they don't already exist. Safe to run on every startup.
