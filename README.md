@@ -1,5 +1,13 @@
+<p align="center">
+  <a href="https://web3-private-production.up.railway.app/">
+    <img src="./assets/logo.svg" height="120" alt="StellarFlow Logo" />
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://web3-private-production.up.railway.app/">
+    <img src="./assets/railway-badge.svg" height="120" alt="Hosted on Railway" />
+  </a>
+</p>
 <h1 align="center">
-  <img src="./assets/logo.svg" width="120" alt="StellarFlow Logo" /><br/>
   <img src="https://capsule-render.vercel.app/api?type=waving&color=0:08060D,50:6366f1,100:eab308&height=240&section=header&text=StellarFlow&fontSize=60&fontColor=ffffff&animation=fadeIn&fontAlignY=38&desc=Web3%20Enterprise%20Treasury%20Operating%20System&descAlignY=65&descSize=20" alt="StellarFlow Banner" />
 </h1>
 
