@@ -402,20 +402,16 @@ export default function AppShell() {
       </main>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="lg:hidden absolute bottom-0 left-0 right-0 h-20 bg-white/90 dark:bg-[#08060D]/90 backdrop-blur-xl border-t border-slate-200 dark:border-white/10 z-40 flex items-center justify-around px-2 pb-safe transition-colors duration-500">
+      <nav className="lg:hidden absolute bottom-0 left-0 right-0 h-20 bg-white/90 dark:bg-[#08060D]/90 backdrop-blur-xl border-t border-slate-200 dark:border-white/10 z-40 flex items-center gap-6 px-6 overflow-x-auto pb-safe transition-colors duration-500 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeView === item.id;
-          
-          // Only show essential icons on mobile to prevent crowding
-          const isEssential = ['dashboard', 'treasury', 'history', 'multisig', 'settings'].includes(item.id);
-          if (!isEssential) return null;
 
           return (
             <button
               key={item.id}
               onClick={() => setActiveView(item.id)}
-              className={`flex flex-col items-center justify-center w-14 h-14 rounded-xl transition-all touch-none active:scale-95 ${
+              className={`flex flex-col items-center justify-center flex-shrink-0 w-14 h-14 rounded-xl transition-all touch-none active:scale-95 ${
                 isActive ? 'text-blue-600 dark:text-indigo-600 dark:text-white' : 'text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >

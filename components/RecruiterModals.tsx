@@ -2,28 +2,47 @@
 
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { Info, Code2, X, Component, Server, Database, Globe, Zap, Lock } from 'lucide-react'
+import { Info, Code2, X, Component, Server, Database, Globe, Zap, Lock, MoreVertical } from 'lucide-react'
 
 export function RecruiterModals() {
   const [activeModal, setActiveModal] = useState<'architecture' | 'engineering' | null>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   return (
     <>
       {/* Floating Action Buttons */}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3">
+      <div className="fixed top-20 right-4 lg:bottom-6 lg:top-auto lg:right-6 z-50 flex flex-col items-end gap-3">
+        <AnimatePresence>
+          {menuOpen && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 10 }}
+              className="flex flex-col gap-2 items-end"
+            >
+              <button
+                onClick={() => { setActiveModal('architecture'); setMenuOpen(false); }}
+                className="flex items-center gap-2 px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 backdrop-blur-md rounded-full shadow-lg transition-all text-xs text-zinc-300 hover:text-white font-mono"
+              >
+                <Globe className="w-3.5 h-3.5" />
+                View Architecture
+              </button>
+              <button
+                onClick={() => { setActiveModal('engineering'); setMenuOpen(false); }}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-950 hover:bg-indigo-900 border border-indigo-800 backdrop-blur-md rounded-full shadow-lg transition-all text-xs text-indigo-300 hover:text-indigo-200 font-mono"
+              >
+                <Code2 className="w-3.5 h-3.5" />
+                Engineering Decisions
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <button
-          onClick={() => setActiveModal('architecture')}
-          className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/10 backdrop-blur-md rounded-full shadow-lg transition-all text-xs text-zinc-300 hover:text-white font-mono"
+          onClick={() => setMenuOpen(!menuOpen)}
+          className="flex items-center justify-center w-10 h-10 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 backdrop-blur-md rounded-full shadow-lg transition-all text-zinc-300 hover:text-white"
         >
-          <Globe className="w-3.5 h-3.5" />
-          View Architecture
-        </button>
-        <button
-          onClick={() => setActiveModal('engineering')}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 backdrop-blur-md rounded-full shadow-lg transition-all text-xs text-indigo-300 hover:text-indigo-200 font-mono"
-        >
-          <Code2 className="w-3.5 h-3.5" />
-          Engineering Decisions
+          <MoreVertical className="w-5 h-5" />
         </button>
       </div>
 
