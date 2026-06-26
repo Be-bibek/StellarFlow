@@ -82,8 +82,11 @@ export function RoutingView({ onNavigate }: { onNavigate?: (view: 'dashboard' | 
     await simulateJitSplit(amount);
   }, [targetInput, simulateJitSplit, clearSimulation]);
 
+  const isValidDestination = destination.trim().startsWith('G') && destination.trim().length === 56;
+
   const handleExecute = useCallback(async () => {
     if (!jitSimulation || pipelineIsRunning) return;
+    if (!isValidDestination) return;
 
     // Convert array of allocations to SourceBreakdown object
     const breakdown = jitSimulation.allocations.reduce((acc, alloc) => {
@@ -92,7 +95,7 @@ export function RoutingView({ onNavigate }: { onNavigate?: (view: 'dashboard' | 
     }, {} as Record<string, string>);
 
     // We don't need to generate a transferId locally anymore, the backend does it
-    const status = await executeJit(jitSimulation.target, breakdown, destination);
+    const status = await executeJit(jitSimulation.target, breakdown, destination.trim());
     
     // Auto-navigate based on Governance gatekeeper outcome
     if (onNavigate) {
@@ -127,7 +130,7 @@ export function RoutingView({ onNavigate }: { onNavigate?: (view: 'dashboard' | 
           {/* Destination */}
           <div className="space-y-2">
             <label className="text-xs uppercase text-slate-500 dark:text-white/50 tracking-wider">
-              Recipient Address
+              Recipient Address <span className="text-red-400">*</span>
             </label>
             <div className="relative">
               <Target className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30" />
@@ -136,9 +139,19 @@ export function RoutingView({ onNavigate }: { onNavigate?: (view: 'dashboard' | 
                 value={destination}
                 onChange={(e) => setDestination(e.target.value)}
                 placeholder="GAHK7EEU... (Stellar G-address)"
-                className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-blue-500/50 font-mono text-slate-900 dark:text-[#F8FAFC] placeholder:text-slate-400 dark:placeholder:text-white/20"
+                className={`w-full bg-slate-50 dark:bg-white/5 border rounded-lg pl-10 pr-4 py-3 text-sm focus:outline-none font-mono text-slate-900 dark:text-[#F8FAFC] placeholder:text-slate-400 dark:placeholder:text-white/20 transition ${
+                  destination && !isValidDestination
+                    ? 'border-red-400 dark:border-red-500/60 focus:border-red-500'
+                    : 'border-slate-200 dark:border-white/10 focus:border-blue-500/50'
+                }`}
               />
             </div>
+            {destination && !isValidDestination && (
+              <p className="text-xs text-red-400">Must be a valid 56-character Stellar address starting with G</p>
+            )}
+            {!destination && (
+              <p className="text-xs text-amber-400/80">Enter the recipient&apos;s Stellar public key to execute the route</p>
+            )}
           </div>
 
           {/* Amount */}
@@ -221,7 +234,7 @@ export function RoutingView({ onNavigate }: { onNavigate?: (view: 'dashboard' | 
                 whileHover={{ scale: 1.02, y: -1 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={handleExecute}
-                disabled={!jitSimulation?.isFullyCovered || pipelineIsRunning}
+                disabled={!jitSimulation?.isFullyCovered || pipelineIsRunning || !isValidDestination}
                 className="py-2.5 bg-white dark:bg-[#08060D] hover:bg-slate-50 dark:hover:bg-[#0f0b1a] border border-blue-200 dark:border-indigo-500/30 text-blue-600 dark:text-indigo-400 rounded-xl text-sm font-medium transition flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {pipelineIsRunning ? (
