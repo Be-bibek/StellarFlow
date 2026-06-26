@@ -1,0 +1,17 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="256" height="256" rx="60" fill="url(#glassGrad)" />
+  
+  <path d="M128 30 L185 115 L128 140 Z" fill="#c084fc" />
+  <path d="M128 30 L71 115 L128 140 Z" fill="#818cf8" />
+  <path d="M128 152 L185 122 L128 226 Z" fill="#e879f9" />
+  <path d="M128 152 L71 122 L128 226 Z" fill="#a78bfa" />
+  <path d="M128 140 L185 115 L128 126 Z" fill="#a855f7" />
+  <path d="M128 140 L71 115 L128 126 Z" fill="#6366f1" />
+
+  <defs>
+    <linearGradient id="glassGrad" x1="0" y1="0" x2="256" y2="256" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffffff" />
+      <stop offset="1" stop-color="#e5e7eb" />
+    </linearGradient>
+  </defs>
+</svg>
