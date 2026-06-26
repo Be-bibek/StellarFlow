@@ -403,7 +403,7 @@ export default function AppShell() {
       </main>
 
       {/* Mobile Bottom Navigation — GooeyNav */}
-      <div className="lg:hidden absolute bottom-0 left-0 right-0 bg-[#08060D]/95 backdrop-blur-xl border-t border-white/10 z-40">
+      <div className="lg:hidden absolute bottom-0 left-0 right-0 bg-white/95 dark:bg-[#08060D]/95 backdrop-blur-xl border-t border-slate-200/60 dark:border-white/10 z-40 transition-colors duration-300">
         <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <div className="flex items-center px-3 py-2 min-w-max">
             <GooeyNav

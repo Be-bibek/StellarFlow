@@ -72,11 +72,11 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
     for (let i = 0; i < particleCount; i++) {
       const t = animationTime * 2 + noise(timeVariance * 2);
       const p = createParticle(i, t, d, r);
-      element.classList.remove('active');
+      element.classList.remove('gooey-active');
       setTimeout(() => {
         const particle = document.createElement('span');
         const point = document.createElement('span');
-        particle.classList.add('particle');
+        particle.classList.add('gooey-particle');
         particle.style.setProperty('--start-x', `${p.start[0]}px`);
         particle.style.setProperty('--start-y', `${p.start[1]}px`);
         particle.style.setProperty('--end-x', `${p.end[0]}px`);
@@ -85,11 +85,11 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
         particle.style.setProperty('--scale', `${p.scale}`);
         particle.style.setProperty('--color', `var(--color-${p.color}, white)`);
         particle.style.setProperty('--rotate', `${p.rotate}deg`);
-        point.classList.add('point');
+        point.classList.add('gooey-point');
         particle.appendChild(point);
         element.appendChild(particle);
         requestAnimationFrame(() => {
-          element.classList.add('active');
+          element.classList.add('gooey-active');
         });
         setTimeout(() => {
           try { element.removeChild(particle); } catch {}
@@ -118,13 +118,13 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
     onSelect(items[index].id);
     updateEffectPosition(liEl);
     if (filterRef.current) {
-      const particles = filterRef.current.querySelectorAll('.particle');
+      const particles = filterRef.current.querySelectorAll('.gooey-particle');
       particles.forEach(p => filterRef.current!.removeChild(p));
     }
     if (textRef.current) {
-      textRef.current.classList.remove('active');
+      textRef.current.classList.remove('gooey-active');
       void textRef.current.offsetWidth;
-      textRef.current.classList.add('active');
+      textRef.current.classList.add('gooey-active');
     }
     if (filterRef.current) {
       makeParticles(filterRef.current);
@@ -137,7 +137,8 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
     const activeLi = lis[activeIndex] as HTMLElement;
     if (activeLi) {
       updateEffectPosition(activeLi);
-      textRef.current?.classList.add('active');
+      textRef.current?.classList.add('gooey-active');
+      filterRef.current?.classList.add('gooey-active');
     }
     const resizeObserver = new ResizeObserver(() => {
       const currentActiveLi = navRef.current?.querySelectorAll('li')[activeIndex] as HTMLElement;
@@ -152,11 +153,17 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
     <>
       <style>{`
         :root {
-          --color-1: #6366f1;
-          --color-2: #8b5cf6;
-          --color-3: #a78bfa;
-          --color-4: #c4b5fd;
+          --color-1: #eab308; /* Neon golden / yellow-500 */
+          --color-2: #ca8a04;
+          --color-3: #f59e0b;
+          --color-4: #fbbf24;
           --linear-ease: linear(0, 0.068, 0.19 2.7%, 0.804 8.1%, 1.037, 1.199 13.2%, 1.245, 1.27 15.8%, 1.274, 1.272 17.4%, 1.249 19.1%, 0.996 28%, 0.949, 0.928 33.3%, 0.926, 0.933 36.8%, 1.001 45.6%, 1.013, 1.019 50.8%, 1.018 54.4%, 1 63.1%, 0.995 68%, 1.001 85%, 1);
+        }
+        html.dark {
+          --color-1: #0ea5e9; /* Light neon blue / sky-500 */
+          --color-2: #38bdf8;
+          --color-3: #0284c7;
+          --color-4: #7dd3fc;
         }
         .gooey-effect {
           position: absolute;
@@ -168,21 +175,13 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
           border-radius: 9999px;
         }
         .gooey-effect.gooey-filter {
-          filter: blur(7px) contrast(100) blur(0);
-          mix-blend-mode: lighten;
-        }
-        .gooey-effect.gooey-filter::before {
-          content: "";
-          position: absolute;
-          inset: -75px;
-          z-index: -2;
-          background: black;
+          filter: url(#gooey-nav-filter);
         }
         .gooey-effect.gooey-filter::after {
           content: "";
           position: absolute;
           inset: 0;
-          background: white;
+          background: var(--color-1);
           transform: scale(0);
           opacity: 0;
           z-index: -1;
@@ -228,7 +227,8 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
           85%  { transform: scale(var(--scale)); opacity: 1; }
           100% { transform: scale(0); opacity: 0; }
         }
-        .gooey-item-active { color: #1e1b4b !important; }
+        .gooey-item-active { color: #451a03 !important; }
+        html.dark .gooey-item-active { color: #1e1b4b !important; }
       `}</style>
 
       {/* colour vars for particles */}
@@ -236,6 +236,16 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
         .particle { }
         .point { }
       `}</style>
+
+      <svg width="0" height="0" style={{ position: 'absolute' }}>
+        <defs>
+          <filter id="gooey-nav-filter">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
+            <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 19 -9" result="goo" />
+            <feComposite in="SourceGraphic" in2="goo" operator="atop" />
+          </filter>
+        </defs>
+      </svg>
 
       <div
         ref={containerRef}
@@ -254,7 +264,7 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
                 className={`relative cursor-pointer flex-shrink-0 rounded-full transition-colors duration-300 ${isActive ? 'gooey-item-active' : ''}`}
                 onClick={(e) => handleClick(index, e.currentTarget as HTMLElement)}
               >
-                <span className={`flex flex-col items-center justify-center gap-0.5 py-2 px-3 select-none ${isActive ? 'text-indigo-900' : 'text-slate-400'}`}>
+                <span className={`flex flex-col items-center justify-center gap-0.5 py-2 px-3 select-none transition-colors duration-300 ${isActive ? 'text-amber-950 dark:text-sky-50' : 'text-slate-500 dark:text-slate-400'}`}>
                   {item.icon && <span className="w-5 h-5 flex items-center justify-center">{item.icon}</span>}
                   <span className="text-[9px] font-medium leading-tight whitespace-nowrap">{item.label}</span>
                 </span>
