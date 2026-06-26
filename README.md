@@ -1,3 +1,7 @@
+<h1 align="center">
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:08060D,50:6366f1,100:eab308&height=240&section=header&text=StellarFlow&fontSize=60&fontColor=ffffff&animation=fadeIn&fontAlignY=38&desc=Web3%20Enterprise%20Treasury%20Operating%20System&descAlignY=65&descSize=20" alt="StellarFlow Banner" />
+</h1>
+
 <p align="center">
   <a href="https://web3-private-production.up.railway.app/">
     <img src="./assets/logo-glow.svg" height="120" alt="StellarFlow Logo" />
@@ -7,10 +11,6 @@
     <img src="./assets/railway-badge-glow.svg" height="120" alt="Hosted on Railway" />
   </a>
 </p>
-
-<h1 align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:08060D,50:6366f1,100:eab308&height=240&section=header&text=StellarFlow&fontSize=60&fontColor=ffffff&animation=fadeIn&fontAlignY=38&desc=Web3%20Enterprise%20Treasury%20Operating%20System&descAlignY=65&descSize=20" alt="StellarFlow Banner" />
-</h1>
 
 <p align="center">
   <img src="https://readme-typing-svg.herokuapp.com?font=JetBrains+Mono&size=22&duration=3000&pause=1000&color=EAB308&center=true&vCenter=true&width=900&lines=Enterprise-Grade+Treasury+OS;Batch+Transfers+%26+Smart+Routing;Multi-Sig+Governance+%26+Approvals;Built+on+the+Stellar+Network" alt="Typing SVG" />
