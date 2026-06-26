@@ -8,7 +8,7 @@
   </a>
   &nbsp;&nbsp;&nbsp;&nbsp;
   <a href="https://web3-private-production.up.railway.app/">
-    <img src="./assets/railway-badge.svg" height="120" alt="Hosted on Railway" />
+    <img src="./assets/railway-badge-animated.svg" height="120" alt="Hosted on Railway" />
   </a>
 </p>
 
