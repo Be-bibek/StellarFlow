@@ -64,56 +64,6 @@ The following metrics demonstrate StellarFlow's transactional throughput advanta
 
 </div>
 
-<p align="center">
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="300" viewBox="0 0 720 300">
-  <defs>
-    <linearGradient id="barGradientGold" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#eab308"/>
-      <stop offset="100%" stop-color="#f59e0b"/>
-    </linearGradient>
-    <linearGradient id="barGradientIndigo" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#6366f1"/>
-      <stop offset="100%" stop-color="#818cf8"/>
-    </linearGradient>
-    <linearGradient id="barGradientRed" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#ef4444"/>
-      <stop offset="100%" stop-color="#f87171"/>
-    </linearGradient>
-    <linearGradient id="barGradientGray" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#64748b"/>
-      <stop offset="100%" stop-color="#94a3b8"/>
-    </linearGradient>
-  </defs>
-  <!-- Background -->
-  <rect width="720" height="300" rx="12" fill="#08060D"/>
-  <!-- Title -->
-  <text x="360" y="30" text-anchor="middle" fill="#eab308" font-family="JetBrains Mono, monospace" font-size="13" font-weight="bold">SETTLEMENT LATENCY COMPARISON</text>
-
-  <!-- Label: Legacy Wire -->
-  <text x="10" y="75" fill="#94a3b8" font-family="monospace" font-size="11">Legacy Wire Transfer</text>
-  <rect x="200" y="58" width="480" height="22" rx="4" fill="url(#barGradientRed)"/>
-  <text x="688" y="74" fill="#ef4444" font-family="monospace" font-size="11" text-anchor="end">48hr</text>
-
-  <!-- Label: SWIFT -->
-  <text x="10" y="125" fill="#94a3b8" font-family="monospace" font-size="11">SWIFT / Banking Rails</text>
-  <rect x="200" y="108" width="280" height="22" rx="4" fill="url(#barGradientGray)"/>
-  <text x="488" y="124" fill="#94a3b8" font-family="monospace" font-size="11" dx="6">12hr</text>
-
-  <!-- Label: Other Crypto -->
-  <text x="10" y="175" fill="#94a3b8" font-family="monospace" font-size="11">Generic Crypto Tools</text>
-  <rect x="200" y="158" width="120" height="22" rx="4" fill="url(#barGradientIndigo)"/>
-  <text x="328" y="174" fill="#818cf8" font-family="monospace" font-size="11" dx="6">60min</text>
-
-  <!-- Label: StellarFlow -->
-  <text x="10" y="225" fill="#eab308" font-family="monospace" font-size="11" font-weight="bold">★ StellarFlow</text>
-  <rect x="200" y="208" width="12" height="22" rx="4" fill="url(#barGradientGold)"/>
-  <text x="220" y="224" fill="#eab308" font-family="monospace" font-size="11" font-weight="bold">~5 sec ✨</text>
-
-  <!-- Divider -->
-  <line x1="20" y1="255" x2="700" y2="255" stroke="#1e1b4b" stroke-width="1"/>
-  <text x="360" y="280" text-anchor="middle" fill="#374151" font-family="monospace" font-size="10">StellarFlow leverages Stellar's 3-5s finality &amp; $0.00001 fees over TCP transaction rails</text>
-</svg>
-</p>
 
 ---
 
