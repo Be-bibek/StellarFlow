@@ -1,98 +1,134 @@
-# StellarFlow
+<h1 align="center">
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:08060D,50:6366f1,100:eab308&height=240&section=header&text=StellarFlow&fontSize=60&fontColor=ffffff&animation=fadeIn&fontAlignY=38&desc=Web3%20Enterprise%20Treasury%20Operating%20System&descAlignY=65&descSize=20" alt="StellarFlow Banner" />
+</h1>
 
-**StellarFlow** is an enterprise-grade treasury routing and Just-In-Time (JIT) liquidity management application built on the Stellar blockchain. It is designed to automate complex, multi-wallet payment routing securely and concurrently.
+<p align="center">
+  <img src="https://readme-typing-svg.herokuapp.com?font=JetBrains+Mono&size=22&duration=3000&pause=1000&color=EAB308&center=true&vCenter=true&width=900&lines=Enterprise-Grade+Treasury+OS;Batch+Transfers+&+Smart+Routing;Multi-Sig+Approvals;Built+on+the+Stellar+Network" alt="Typing SVG" /> 
+</p>
 
-This project showcases a full-stack implementation with a **Next.js** frontend, a **Rust (Axum)** backend, and integrations with **PostgreSQL**, **Redis**, and the **Stellar Horizon / Soroban** networks.
+<p align="center">
+  <a href="https://nextjs.org/"><img src="https://img.shields.io/badge/Next.js-15+-black?style=flat-square&logo=next.js" alt="Next.js" /></a>
+  <a href="https://www.rust-lang.org"><img src="https://img.shields.io/badge/Rust-Backend-E43716.svg?style=flat-square&logo=rust" alt="Rust Version" /></a>
+  <a href="https://stellar.org/"><img src="https://img.shields.io/badge/Stellar-Network-000000.svg?style=flat-square&logo=stellar" alt="Stellar" /></a>
+  <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/Tailwind-CSS-38B2AC.svg?style=flat-square&logo=tailwind-css" alt="TailwindCSS" /></a>
+  <img src="https://img.shields.io/badge/PWA-Enabled-blue.svg?style=flat-square" alt="PWA" />
+</p>
 
-## Table of Contents
-- [Project Overview](#project-overview)
-- [Key Features](#key-features)
-- [Architecture & Tech Stack](#architecture--tech-stack)
-- [Current Implementation Status](#current-implementation-status)
-- [How to Run Locally](#how-to-run-locally)
+**StellarFlow** is a next-generation **Corporate Treasury Operating System** built natively for Web3. It provides enterprises and DAOs with a unified, high-performance interface to manage digital assets, orchestrate complex batch payouts, and enforce strict multi-signature governance on the Stellar network.
 
----
-
-## Project Overview
-
-Organizations operating at scale on Stellar often face the challenge of fragmented liquidity across multiple channel accounts or functional vaults (e.g., Payroll, Operations, Marketing). **StellarFlow** solves this by offering a JIT routing engine that aggregates available balances across various vaults and intelligently splits a large payment request so that it is seamlessly fulfilled without manual intervention.
-
-To handle high-throughput, concurrent executions without sequence number collisions (`tx_bad_seq`), StellarFlow utilizes a Redis-backed atomic sequence manager. Furthermore, the application provides a highly responsive UI powered by WebSockets to stream real-time pipeline execution states directly to the user.
-
----
-
-## Key Features
-
-- **JIT Allocation Engine:** Dynamically queries live balances from Stellar Horizon and automatically computes payment splits across multiple internal treasury wallets to cover a single large outbound transaction.
-- **Real-Time Execution Pipeline:** A WebSocket-based transit engine streams live transaction status updates (`AUTHORIZING`, `ROUTING`, `STELLAR_LEDGER`, `SETTLED`, `FAILED`) to the UI, providing a seamless visual experience.
-- **Robust Transaction Building:** Uses `stellar-xdr` and `ed25519-dalek` in Rust to safely construct, serialize, and sign XDR transaction envelopes entirely in the backend without relying on deprecated SDKs.
-- **High-Concurrency Sequence Management:** Integrates Redis atomic increments (`INCR`) to manage Stellar account sequence numbers, completely eliminating sequence collision risks across concurrent background workers.
-- **Premium UI / UX:** A visually stunning, dark-mode focused interface built with Next.js, TailwindCSS, and Zustand for state management, featuring micro-animations, glassmorphism, and live data visualizations.
+Designed with a sleek, glassmorphic UI and optimized for mobile as a Progressive Web App (PWA), StellarFlow brings institutional-grade asset management to the fingertips of modern treasury operators.
 
 ---
 
-## Architecture & Tech Stack
+## 🌟 Core Features
 
-### Frontend
-- **Framework:** Next.js (App Router), React 18
-- **Styling:** TailwindCSS, Lucide Icons, Custom Animations
-- **State Management:** Zustand (for reactive, un-drilled state management)
-- **Real-Time Integration:** Native WebSockets connected to the Rust Gateway
-
-### Backend
-- **Framework:** Rust, Axum (high-performance async web framework)
-- **Database:** PostgreSQL (managed via SQLx for compile-time verified queries)
-- **Caching & Locking:** Redis (used for Sequence Number management and distributed locking)
-- **Stellar Integration:** `stellar-xdr` (for protocol-level XDR encoding), direct HTTP client to Horizon, and `ed25519-dalek` for cryptographic signatures.
+| Feature | Description |
+|---|---|
+| **Batch Transfers** | Execute thousands of disbursements concurrently with optimized network fees. |
+| **Smart Routing** | AI-assisted optimal pathfinding for cross-currency liquidity and settlements. |
+| **Multi-Sig Approvals** | Granular, threshold-based transaction signing and organizational governance. |
+| **Intelligence Analytics** | Real-time financial dashboards, cash-flow velocity, and treasury health metrics. |
+| **PWA Mobile App** | Installable directly to iOS/Android home screens with a dedicated App UI. |
 
 ---
 
-## Current Implementation Status
+## 🚀 Future Roadmap: SentinelMark SDK Integration
 
-This repository is currently up-to-date with the completion of **Phase C** of the architectural roadmap. The following core milestones have been achieved:
+As enterprise treasuries require unparalleled security, the next evolution of StellarFlow focuses on integrating **[SentinelMark](https://github.com/Be-bibek/sentinelmark)** — a **Behavior-Aware Continuous Trust Infrastructure Platform**.
 
-### ✅ Completed Deliverables
+StellarFlow will consume the SentinelMark API/ADK to act as a deterministic, blockchain-agnostic trust authorization layer for high-value treasury actions.
 
-1. **Phase P0 (Foundation):** 
-   - Initialized the Rust Axum backend with Postgres/Redis connections and error handling layers.
-   - Built the Next.js frontend shell, implementing a beautiful Glassmorphic dark mode dashboard with Zustand state management.
-   
-2. **Phase P1 (JIT Engine):**
-   - Implemented the `jit_aggregator` in Rust which fetches real live wallet balances from Horizon and runs the algorithmic split computation.
-   - Wired the Next.js UI to simulate routing, showing the allocation breakdown across active wallets before execution.
+### How SentinelMark Secures StellarFlow
+Instead of relying solely on static multi-sig approvals, StellarFlow will continuously ask: *"Can this treasury operator be trusted right now?"* 
 
-3. **Phase C (Real Stellar Transaction Execution):**
-   - **Replaced mocks with real execution:** The backend now constructs actual Stellar transaction XDRs, signs them, and submits them to the live Horizon testnet.
-   - **Sequence Number Management:** Completed the Redis integration (`get_and_increment` atomic operations) to handle concurrent sequence number generation flawlessly.
-   - **Database State Synchronization:** The Postgres `transactions` table correctly reflects the live settlement status and stores real `stellar_tx_hash` values.
-   - **Live WebSocket Transit:** The frontend perfectly animates the pipeline flow from `Staged` all the way to `Settled` using real-time WebSocket events fired by the Rust backend after actual Horizon settlement.
+By integrating the `sentinelmark-rs` SDK, StellarFlow gains:
 
-> **Note on Phase C Multi-Wallet Execution:** 
-> While the JIT algorithm correctly computes allocations across *all* active vaults (Payroll, Marketing, etc.), the physical XDR execution layer is currently configured to broadcast relying exclusively on the Master Treasury `.env` signer. Full multi-wallet cryptographic execution requires integrating the AES decryption layer to unlock individual channel account secrets, which is slated for the upcoming Phase D.
+1. **Identity & Workflow Anomaly Detection**: If a treasury manager attempts a batch transfer from a new device footprint or an impossible-travel location, the **Identity Engine** instantly flags the deviation.
+2. **Deterministic Behavioral Risk Scoring**: The **Risk Engine** evaluates the operator's live behavioral entropy (typical hours, geo-regions, transaction volumes) and returns a 0.0-1.0 Risk Assessment.
+3. **Dynamic Trust Policies**: 
+    - *Low Risk*: Automatic batch execution.
+    - *Medium Risk*: Enforces the **Policy Engine** to automatically require additional Multi-Sig approvals.
+    - *High Risk*: Hard Block / Immediate Quarantine of funds.
+4. **Forensic Telemetry**: Every treasury action generates an unforgeable, append-only cryptographic hash chain acting as permanent audit evidence for compliance.
+
+<div align="center">
+```mermaid
+flowchart TD
+    %% Define Styles
+    classDef default fill:#1E293B,stroke:#38BDF8,stroke-width:2px,color:#fff;
+    classDef highlight fill:#0F172A,stroke:#F43F5E,stroke-width:3px,color:#fff;
+    classDef action fill:#064E3B,stroke:#10B981,stroke-width:2px,color:#fff;
+
+    subgraph StellarFlow ["Treasury OS"]
+        T(Initiate Batch Transfer) --> SDK[SentinelMark SDK]
+    end
+
+    subgraph SentinelMark ["Continuous Trust Infrastructure"]
+        SDK --> BE[Behavior Engine]
+        BE -->|Telemetry| RE[Risk Engine]
+        RE -->|Trust Score| PE[Policy Engine]
+    end
+
+    subgraph Governance ["Outcome Enforcement"]
+        PE --> A[Allow Transfer]:::action
+        PE --> AP[Escalate to Multi-Sig]:::highlight
+        PE --> B[Block Transaction]:::highlight
+    end
+```
+</div>
 
 ---
 
-## How to Run Locally
+## 🛠️ Tech Stack & Architecture
+
+- **Frontend**: Next.js 15 (App Router), React 19, TailwindCSS v4, Framer Motion for liquid/gooey micro-animations.
+- **Backend**: High-performance Rust server orchestrating background tasks and API gateways.
+- **Database**: PostgreSQL (with connection pooling) for robust relational state management.
+- **Blockchain**: `stellar-sdk` for Horizon API interactions, signing, and smart routing.
+
+---
+
+## 📦 Getting Started
 
 ### Prerequisites
-- Node.js (v18+)
-- Rust (1.75+)
-- PostgreSQL (running locally on port 5432)
-- Redis (running locally on port 6379)
+* **Node.js** 22+ & npm
+* **Rust** 1.75+
+* **PostgreSQL** instance running
 
-### Setup the Backend
-1. Navigate to the `backend` directory.
-2. Copy `.env.example` to `.env` and fill in your PostgreSQL, Redis, and Stellar Signer details.
-3. Apply database migrations: `cargo run --bin stellarflow-backend` (Seed data will automatically populate).
-4. Start the backend: `cargo run`
-   *(Backend runs on `http://localhost:8080`)*
+### Installation
 
-### Setup the Frontend
-1. Navigate to the project root (where `package.json` is located).
-2. Install dependencies: `npm install`
-3. Run the development server: `npm run dev`
-4. Open `http://localhost:3000` in your browser.
+1. **Clone the repository**
+```bash
+git clone https://github.com/Be-bibek/web3-private.git
+cd web3-private
+```
+
+2. **Start the Frontend**
+```bash
+npm install
+npm run dev
+# The app will be running at http://localhost:3000
+```
+
+3. **Start the Rust Backend**
+```bash
+cd backend
+cargo run
+# The backend will listen for API requests at http://localhost:8080
+```
 
 ---
 
-*This application was engineered with a focus on addressing the highest-risk architectural components of distributed Stellar application design, particularly concurrency control, cryptographic safety, and responsive real-time feedback.*
+## 🎓 Author
+
+**Bibek Das**  
+* B.Tech Scholar, **Electronics and Communication Engineering (ECE)**  
+* **Guru Nanak Institute of Technology**  
+* Email: [bibekdas1055@gmail.com](mailto:bibekdas1055@gmail.com)  
+* GitHub: [@Be-bibek](https://github.com/Be-bibek)  
+
+<br/>
+
+<div align="center">
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:eab308,50:6366f1,100:08060D&height=180&section=footer&text=Orchestrating%20the%20Future%20of%20Web3%20Finance&fontSize=26&fontColor=ffffff&animation=fadeIn&fontAlignY=65" alt="Footer Wave" />
+</div>
