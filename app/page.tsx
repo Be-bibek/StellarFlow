@@ -41,6 +41,7 @@ import { useTransactionStore } from '@/lib/stores/transaction-store';
 import { BootSequence } from '@/components/BootSequence';
 import { IntroScreen } from '@/components/IntroScreen';
 import { RecruiterModals } from '@/components/RecruiterModals';
+import GooeyNav from '@/components/ui/gooey-nav';
 
 type ActiveView = 'dashboard' | 'history' | 'treasury' | 'routing' | 'batch' | 'transit' | 'multisig' | 'analytics' | 'settings' | 'governance' | 'funding';
 
@@ -401,26 +402,28 @@ export default function AppShell() {
         </div>
       </main>
 
-      {/* Mobile Bottom Navigation */}
-      <nav className="lg:hidden absolute bottom-0 left-0 right-0 h-20 bg-white/90 dark:bg-[#08060D]/90 backdrop-blur-xl border-t border-slate-200 dark:border-white/10 z-40 flex items-center gap-6 px-6 overflow-x-auto pb-safe transition-colors duration-500 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = activeView === item.id;
-
-          return (
-            <button
-              key={item.id}
-              onClick={() => setActiveView(item.id)}
-              className={`flex flex-col items-center justify-center flex-shrink-0 w-14 h-14 rounded-xl transition-all touch-none active:scale-95 ${
-                isActive ? 'text-blue-600 dark:text-indigo-600 dark:text-white' : 'text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              <Icon className="w-6 h-6 mb-1" />
-              {isActive && <motion.div layoutId="mobileActive" className="w-1 h-1 rounded-full bg-blue-500 dark:bg-indigo-500" />}
-            </button>
-          );
-        })}
-      </nav>
+      {/* Mobile Bottom Navigation — GooeyNav */}
+      <div className="lg:hidden absolute bottom-0 left-0 right-0 bg-[#08060D]/95 backdrop-blur-xl border-t border-white/10 z-40">
+        <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <div className="flex items-center px-3 py-2 min-w-max">
+            <GooeyNav
+              activeId={activeView}
+              onSelect={(id) => setActiveView(id as ActiveView)}
+              animationTime={500}
+              particleCount={12}
+              particleDistances={[70, 8]}
+              particleR={80}
+              timeVariance={250}
+              colors={[1, 2, 3, 1, 2, 3, 1, 4]}
+              items={navItems.map((item) => ({
+                id: item.id,
+                label: item.label.replace('Center', '').replace('Intelligence ', '').replace('System ', '').trim(),
+                icon: <item.icon className="w-5 h-5" />,
+              }))}
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
