@@ -3,6 +3,16 @@
 </h1>
 
 <p align="center">
+  <a href="https://web3-private-production.up.railway.app/">
+    <img src="./assets/logo-glow.svg" height="120" alt="StellarFlow Logo" />
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://web3-private-production.up.railway.app/">
+    <img src="./assets/railway-badge-glow.svg" height="120" alt="Hosted on Railway" />
+  </a>
+</p>
+
+<p align="center">
   <img src="https://readme-typing-svg.herokuapp.com?font=JetBrains+Mono&size=22&duration=3000&pause=1000&color=EAB308&center=true&vCenter=true&width=900&lines=Enterprise-Grade+Treasury+OS;Batch+Transfers+%26+Smart+Routing;Multi-Sig+Governance+%26+Approvals;Built+on+the+Stellar+Network" alt="Typing SVG" />
 </p>
 
@@ -40,29 +50,9 @@ It is a **full-stack, enterprise-grade Treasury Operating System** that lives na
 
 The following metrics demonstrate StellarFlow's transactional throughput advantages over traditional treasury pipelines:
 
-<div align="center">
-
-```
-╔══════════════════════════════════════════════════════════════════════════════╗
-║                  TRANSACTION PIPELINE EFFICIENCY COMPARISON                  ║
-╠══════════════════════════════════════════════════════════════════════════════╣
-║                                                                              ║
-║  Manual / Legacy Wire Transfer                                               ║
-║  ████████████████████████████████████████████████ 24–48 hrs                 ║
-║                                                                              ║
-║  SWIFT / Traditional Payment Rails                                           ║
-║  ██████████████████████████████          8–12 hrs                           ║
-║                                                                              ║
-║  Existing Crypto Treasury Tools                                              ║
-║  █████████████████                       30–90 min                          ║
-║                                                                              ║
-║  StellarFlow (Stellar Network)                                               ║
-║  ██                                      3–5 sec ✨                          ║
-║                                                                              ║
-╚══════════════════════════════════════════════════════════════════════════════╝
-```
-
-</div>
+<p align="center">
+  <img src="./assets/latency-chart.svg" alt="Settlement Latency Comparison Chart" />
+</p>
 
 
 ---
@@ -160,6 +150,292 @@ flowchart TD
 ```
 
 </div>
+
+---
+
+## 🏗️ Architecture Deep-Dive
+
+> As the architect of StellarFlow, every infrastructure decision was made with three constraints in mind: **financial safety**, **horizontal scalability**, and **zero single-points of failure**. Below are the five key system diagrams that define how StellarFlow is built.
+
+---
+
+### 1. 🌐 Network & Infrastructure Topology
+
+*The macro-level view — how traffic flows from a browser through the load-balanced cluster and onto the Stellar network.*
+
+<div align="center">
+
+```mermaid
+flowchart TB
+    classDef cdn    fill:#0c1a2e,stroke:#38BDF8,stroke-width:2px,color:#38BDF8
+    classDef lb     fill:#1a0a2e,stroke:#a855f7,stroke-width:2px,color:#a855f7
+    classDef rust   fill:#2d1a0e,stroke:#E43716,stroke-width:2px,color:#E43716
+    classDef db     fill:#0a1a0a,stroke:#22c55e,stroke-width:2px,color:#22c55e
+    classDef cache  fill:#1a1000,stroke:#eab308,stroke-width:2px,color:#eab308
+    classDef chain  fill:#0a0a1a,stroke:#6366f1,stroke-width:2px,color:#6366f1
+
+    User(["👤 Treasury Operator\n(Browser / PWA)"])
+
+    subgraph Edge ["Edge — Vercel Global CDN"]
+        direction LR
+        CDN["⚡ Next.js 15\nSSR + Static Assets"]:::cdn
+    end
+
+    subgraph LB ["Load Balancer — Railway Proxy"]
+        direction LR
+        Proxy["🔀 Reverse Proxy\nRound-Robin + Health Check"]:::lb
+    end
+
+    subgraph Cluster ["Rust/Axum Worker Cluster"]
+        direction LR
+        N1["🦀 Axum Node 1\nPort 8080"]:::rust
+        N2["🦀 Axum Node 2\nPort 8081"]:::rust
+        N3["🦀 Axum Node N\n(Horizontal Scale)"]:::rust
+    end
+
+    subgraph Storage ["Persistent Storage Layer"]
+        PG[("🐘 PostgreSQL\nSQLx Pool — 50 Conns\nAudit Ledger & State")]:::db
+        RD[("⚡ Redis\nO(1) Multi-Sig XDR\nSession & Event Cache")]:::cache
+    end
+
+    subgraph Stellar ["Stellar Blockchain Network"]
+        HZ["🌐 Horizon REST API\nAccount Queries / Tx Submit"]:::chain
+        RPC["🔭 Soroban RPC\nContract Events / Simulation"]:::chain
+        NET["⛓️ Stellar Ledger\n~5s Finality"]:::chain
+    end
+
+    User -->|"HTTPS"| CDN
+    CDN -->|"WebSocket / REST"| Proxy
+    Proxy --> N1 & N2 & N3
+    N1 & N2 & N3 --> PG
+    N1 & N2 & N3 --> RD
+    N1 & N2 & N3 --> HZ
+    N1 & N2 & N3 --> RPC
+    HZ --> NET
+    RPC --> NET
+```
+
+</div>
+
+**Why this topology?**
+- **Vercel CDN** serves the Next.js frontend at the edge — zero cold-start latency for the treasury dashboard globally.
+- **Railway Reverse Proxy** sits in front of the Rust cluster, performing health checks and round-robin routing. If a node dies, traffic is instantly rerouted.
+- **Horizontal scaling** is native: because each Axum node is stateless (state lives in PostgreSQL and Redis), adding more nodes requires zero application changes.
+
+---
+
+### 2. ⚡ Real-Time WebSocket Event Pipeline
+
+*How on-chain Soroban events travel from the Stellar ledger to the UI in under 3 seconds.*
+
+<div align="center">
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Ledger   as ⛓️ Stellar Ledger
+    participant RPC      as 🔭 Soroban RPC Node
+    participant Poller   as 🦀 Event Poller<br/>(tokio::spawn)
+    participant DB       as 🐘 PostgreSQL
+    participant Channel  as 📡 Broadcast Channel<br/>(tokio::sync::broadcast)
+    participant WS       as 🔌 WebSocket Gateway<br/>/v1/transit/:org_id
+    participant UI       as 🖥️ Treasury Dashboard
+
+    Ledger  ->> RPC     : Emits contract event<br/>("routed", "approved")
+    loop Every 3 seconds
+        Poller  ->> RPC     : POST getEvents { startLedger: cursor }
+        RPC     -->> Poller : Raw SCVal XDR event batch
+    end
+    Poller  ->> Poller  : Parse XDR → TransitEvent struct
+    Poller  ->> DB      : UPDATE transactions SET status = 'STELLAR_LEDGER'
+    Poller  ->> Channel : broadcast_tx.send(JSON payload)
+    Channel -->> WS     : Fan-out to all subscribers
+    WS      -->> UI     : Text frame: { type: "STATUS_CHANGE", status: "SETTLED" }
+    UI      ->> UI      : Framer Motion animates state transition
+```
+
+</div>
+
+**Key engineering decisions:**
+- **Long-polling over subscriptions**: Soroban RPC `getEvents` with a ledger cursor is more reliable than server-sent subscriptions during network partitions — it naturally replays missed events on reconnect.
+- **`tokio::sync::broadcast` channel**: One sender, N receivers. Each connected WebSocket client subscribes its own `Receiver` clone. Lagging clients are dropped gracefully — no backpressure on the critical broadcast path.
+- **Org-ID filtering at the gateway**: Each enterprise's WebSocket connection only receives events matching its `org_id`, preventing cross-tenant data leakage without per-message encryption overhead.
+
+---
+
+### 3. 💸 Parallel Batch Payment Engine
+
+*How StellarFlow eliminates Stellar sequence number collisions when processing 100+ concurrent payouts.*
+
+<div align="center">
+
+```mermaid
+flowchart TD
+    classDef gold   fill:#1a1400,stroke:#eab308,stroke-width:2px,color:#eab308
+    classDef rust   fill:#2d1a0e,stroke:#E43716,stroke-width:2px,color:#E43716
+    classDef db     fill:#0a1a0a,stroke:#22c55e,stroke-width:2px,color:#22c55e
+    classDef chain  fill:#0a0a1a,stroke:#6366f1,stroke-width:2px,color:#6366f1
+    classDef worker fill:#0f1a2d,stroke:#38BDF8,stroke-width:2px,color:#38BDF8
+
+    FE["📋 Frontend\nPOST /api/v1/payments/batch\n{ recipients: [...500 rows] }"]:::gold
+
+    subgraph Handler ["Axum Request Handler"]
+        V["✅ Validate Addresses\n& Amounts"]:::rust
+        SIM["🔭 Soroban Simulation\nroute_payout (read-only)\nGet vault split map"]:::rust
+        STAGE["📝 Stage All Records\nINSERT INTO transactions\nStatus = AUTHORIZING"]:::rust
+    end
+
+    subgraph Pool ["tokio Channel Account Worker Pool"]
+        W1["🦀 Worker 1\nChannel Acct #1\nSKIP LOCKED"]:::worker
+        W2["🦀 Worker 2\nChannel Acct #2\nSKIP LOCKED"]:::worker
+        WN["🦀 Worker N\nChannel Acct #N\nSKIP LOCKED"]:::worker
+    end
+
+    subgraph SM ["Per-Worker State Machine"]
+        direction LR
+        AUTH["AUTHORIZING"] --> ROUTE["ROUTING"] --> LEDGER["STELLAR_LEDGER"] --> SETTLE["SETTLED"]
+    end
+
+    PG[("🐘 PostgreSQL\nChannel Account Lock Table\nFOR UPDATE SKIP LOCKED")]:::db
+    HZ["🌐 Horizon API\n/transactions"]:::chain
+    BC["📡 Broadcast\nWebSocket Events\nAt Each Transition"]
+
+    FE --> V --> SIM --> STAGE
+    STAGE -->|"tokio::spawn × N"| W1 & W2 & WN
+    W1 & W2 & WN -->|"Acquire exclusive lock"| PG
+    PG -->|"Return unlocked channel"| W1 & W2 & WN
+    W1 & W2 & WN --> SM
+    SM -->|"Submit signed XDR"| HZ
+    SM --> BC
+```
+
+</div>
+
+**The sequence number problem — and how we solved it:**
+
+On Stellar, every account has a monotonically increasing sequence number. If two transactions from the same account are submitted simultaneously, one will fail with `txBAD_SEQ`. Most platforms serialize payroll, making it slow.
+
+StellarFlow's solution: a **pool of pre-funded Channel Accounts**. Each worker task grabs one with `SELECT ... FOR UPDATE SKIP LOCKED` — a PostgreSQL advisory lock that is atomic and race-condition-proof. Each channel has its own sequence number sequence, so 100 workers can broadcast 100 transactions in true parallel without a single collision.
+
+---
+
+### 4. 🔐 Multi-Sig XDR Coordination State Machine
+
+*The lifecycle of a high-value transaction requiring 3-of-5 executive approval, from creation to Horizon submission.*
+
+<div align="center">
+
+```mermaid
+stateDiagram-v2
+    direction LR
+
+    [*] --> PENDING : POST /api/v1/approvals/pending\nXDR envelope staged in Redis\nTTL = 24h
+
+    PENDING --> PENDING : POST /api/v1/approvals/sign\nSignature injected into XDR\nCounter incremented (1/5, 2/5...)
+
+    PENDING --> THRESHOLD_MET : N-th signature received\ncurrent_signatures == required_signatures
+
+    THRESHOLD_MET --> SUBMITTED : Auto-submit to Horizon\nPOST /transactions\n(no human action required)
+
+    SUBMITTED --> CONFIRMED : Horizon confirms\nledger_sequence recorded\nWebSocket → "SETTLED"
+
+    SUBMITTED --> REJECTED : Horizon returns error\nXDR invalid or network fault
+
+    PENDING --> EXPIRED : Redis TTL exhausted\nOR expires_at timestamp crossed
+
+    CONFIRMED --> [*]
+    REJECTED  --> [*]
+    EXPIRED   --> [*]
+```
+
+</div>
+
+**Why Redis for XDR storage?**
+- XDR envelopes are hot data — they are read and mutated on every signature submission. Redis delivers **O(1) GET/SET** with sub-millisecond latency, critical for interactive approval UX.
+- `KEEPTTL` on every write preserves the original expiry without needing to recalculate TTL deltas — a Redis 6+ primitive that removes an entire class of race conditions.
+- PostgreSQL remains the **durable audit trail**: the `approval_signatures` table enforces `UNIQUE (approval_id, signer_address)` at the database layer, making double-signing physically impossible.
+
+---
+
+### 5. 🗄️ Relational Data Model
+
+*The PostgreSQL schema that powers the treasury ledger — designed for auditability, multi-tenancy, and high-concurrency access patterns.*
+
+<div align="center">
+
+```mermaid
+erDiagram
+    organizations {
+        UUID   id               PK
+        TEXT   name
+        TEXT   admin_address    UK  "Stellar G-address"
+        TEXT   contract_address     "Soroban TreasuryRouter"
+        TIMESTAMPTZ created_at
+    }
+
+    wallets {
+        UUID        id           PK
+        UUID        org_id       FK
+        TEXT        wallet_name
+        TEXT        public_key   UK  "Stellar G-address"
+        wallet_type wallet_type      "PAYROLL | OPERATIONS | RESERVE"
+        BOOL        is_active
+    }
+
+    transactions {
+        UUID               id           PK
+        TEXT               transfer_id  UK
+        UUID               org_id       FK
+        NUMERIC_20_7       amount
+        TEXT               destination
+        JSONB              source_breakdown  "Vault split map"
+        transaction_status status           "AUTHORIZING→SETTLED"
+        TEXT               stellar_tx_hash
+        BIGINT             ledger_sequence
+        UUID               batch_id
+    }
+
+    approval_requests {
+        UUID            id                  PK
+        TEXT            redis_key           UK  "sf:approval:{id}:xdr"
+        UUID            org_id              FK
+        NUMERIC_20_7    amount
+        INT             required_signatures
+        INT             current_signatures
+        approval_status status              "PENDING→CONFIRMED"
+        TIMESTAMPTZ     expires_at
+    }
+
+    approval_signatures {
+        UUID id             PK
+        UUID approval_id    FK
+        TEXT signer_address
+        TEXT signature_b64      "Ed25519 64-byte sig"
+        TEXT hint_hex           "4-byte key hint"
+    }
+
+    channel_accounts {
+        UUID id              PK
+        TEXT public_key      UK
+        TEXT encrypted_secret   "AES-256 / KMS"
+        BOOL is_locked          "FOR UPDATE SKIP LOCKED"
+        UUID locked_by_batch FK
+        INT8 last_sequence
+    }
+
+    organizations    ||--o{  wallets            : "owns"
+    organizations    ||--o{  transactions        : "initiates"
+    organizations    ||--o{  approval_requests   : "manages"
+    approval_requests ||--o{ approval_signatures : "collects"
+    channel_accounts ||--o{  transactions        : "broadcasts via"
+```
+
+</div>
+
+**Schema design principles:**
+- **`transaction_status` as a PostgreSQL ENUM** — the database physically enforces the `AUTHORIZING → ROUTING → STELLAR_LEDGER → SETTLED / FAILED` state machine. Invalid transitions are impossible at the storage layer, not just the application layer.
+- **`source_breakdown JSONB`** — the per-vault capital split from the Soroban `route_payout` call is stored as structured JSON, queryable with PostgreSQL's `@>` operator for post-hoc analytics without schema migrations.
+- **`channel_accounts.is_locked` with `FOR UPDATE SKIP LOCKED`** — pure SQL concurrency control for the worker pool. No distributed lock manager (like Redlock) required.
 
 ---
 
