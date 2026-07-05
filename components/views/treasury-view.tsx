@@ -45,9 +45,11 @@ export function TreasuryView() {
       <TreasuryRouter />
 
       {/* On-Chain Contract Interaction Desk */}
-      <BentoCard delay={0.05} className="relative overflow-hidden w-full">
-        <ContractDesk />
-      </BentoCard>
+      <div className="grid grid-cols-1">
+        <BentoCard delay={0.05} className="relative overflow-hidden w-full">
+          <ContractDesk />
+        </BentoCard>
+      </div>
 
       <div className="flex flex-col md:flex-row gap-6 relative">
         {/* Main Table Container */}
