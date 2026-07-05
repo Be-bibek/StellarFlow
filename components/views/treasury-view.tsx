@@ -45,11 +45,14 @@ export function TreasuryView() {
       <TreasuryRouter />
 
       {/* On-Chain Contract Interaction Desk */}
-      <BentoCard delay={0.05} className="w-full" noPadding>
-        <div className="w-full bg-white dark:bg-white/[0.02] border-none rounded-2xl p-6">
-          <ContractDesk />
-        </div>
-      </BentoCard>
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.05, duration: 0.5, ease: 'easeOut' }}
+        className="w-full bg-white dark:bg-[#0D0B14] border border-[rgba(212,163,89,0.15)] dark:border-[rgba(255,255,255,0.05)] rounded-2xl p-6 shadow-sm"
+      >
+        <ContractDesk />
+      </motion.div>
 
       <div className="flex flex-col md:flex-row gap-6 relative">
         {/* Main Table Container */}
