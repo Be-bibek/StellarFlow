@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { BentoCard } from '@/components/ui/bento-card';
 import { Plus, Link as LinkIcon, Download, Search, ChevronRight, Lock, Key } from 'lucide-react';
 import { useTreasuryStore } from '@/lib/stores/treasury-store';
+import { TreasuryRouter } from '@/components/treasury-router';
+import { ContractDesk } from '@/components/contract-desk';
 
 export function TreasuryView() {
   const [selectedWallet, setSelectedWallet] = useState<string | null>(null);
@@ -38,6 +40,13 @@ export function TreasuryView() {
             <Download className="w-4 h-4" /> Export Ledger Sheet
           </motion.button>
         </div>
+      </div>
+
+      <TreasuryRouter />
+
+      {/* On-Chain Contract Interaction Desk */}
+      <div className="w-full bg-white/[0.02] dark:bg-white/[0.02] border border-white/10 rounded-2xl p-6">
+        <ContractDesk />
       </div>
 
       <div className="flex flex-col md:flex-row gap-6 relative">

@@ -12,7 +12,7 @@
 #![no_std]
 
 use soroban_sdk::{
-    contract, contractimpl, contracttype, symbol_short,
+    contract, contractimpl, contracttype,
     token::Client as TokenClient,
     Address, Env, Map, Symbol, Vec,
 };
@@ -49,7 +49,7 @@ pub enum StorageKey {
 
 /// Strongly-typed contract error codes. Mirrors the off-chain AppError enum.
 #[contracttype]
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[repr(u32)]
 pub enum ContractError {
     /// Caller did not provide a valid admin authentication signature.
@@ -282,15 +282,11 @@ impl TreasuryRouter {
         }
 
         // --- Event Emission -------------------------------------------------
-        // Emit structured "routed" event consumed by transit_engine.rs.
+        // Emit structured "netting" event consumed by transit_engine.rs.
+        use soroban_sdk::symbol_short;
         env.events().publish(
-            (Symbol::new(&env, "routed"),),
-            (
-                source_admin.clone(),
-                destination.clone(),
-                total_target,
-                allocation_map.clone(),
-            ),
+            (symbol_short!("netting"), symbol_short!("success")), 
+            total_target
         );
 
         allocation_map

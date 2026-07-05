@@ -1,0 +1,45 @@
+name: StellarFlow CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-test-contract:
+    name: Build & Test Soroban Contract
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+          
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            backend
+            backend/contracts
+            
+      - name: Run Contract Tests
+        working-directory: ./backend/contracts
+        run: cargo test
+        
+      - name: Build Contract WASM
+        working-directory: ./backend/contracts
+        run: cargo build --target wasm32-unknown-unknown --release
+        
+      - name: Upload WASM Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: treasury_router.wasm
+          path: ./backend/contracts/target/wasm32-unknown-unknown/release/treasury_router.wasm
+          retention-days: 5

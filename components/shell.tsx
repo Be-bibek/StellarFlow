@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { connectFreighterWallet, fetchXlmBalance } from "../lib/stellar";
 import { motion } from "motion/react";
 import { ThemeToggle } from "./theme-toggle";
 import { 
@@ -23,6 +24,24 @@ import {
 export function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [balance, setBalance] = useState<string>("0.0000");
+
+  const handleConnect = async () => {
+    try {
+      const address = await connectFreighterWallet();
+      setWalletAddress(address);
+      const bal = await fetchXlmBalance(address);
+      setBalance(bal);
+    } catch (error) {
+      console.error("Wallet connection failed:", error);
+    }
+  };
+
+  const handleDisconnect = () => {
+    setWalletAddress(null);
+    setBalance("0.0000");
+  };
 
   const navItems = [
     { href: "/", label: "Dashboard", badge: undefined, icon: LayoutDashboard },
@@ -175,7 +194,22 @@ export function Shell({ children }: { children: React.ReactNode }) {
             )}
 
             <div className="h-8 w-[1px] bg-border"></div>
-            <button className="bg-accent hover:bg-blue-400 text-white text-xs font-bold px-5 py-2.5 rounded-lg shadow-lg shadow-accent/20 transition-all">
+            {walletAddress ? (
+              <div className="flex items-center gap-3 bg-white/5 px-4 py-2.5 rounded-lg border border-border">
+                <span className="text-xs font-bold text-accent">{balance} XLM</span>
+                <div className="h-4 w-[1px] bg-border"></div>
+                <span className="text-xs text-text-secondary">{walletAddress.slice(0, 4)}...{walletAddress.slice(-4)}</span>
+                <button onClick={handleDisconnect} className="text-[10px] text-danger ml-2 hover:underline">Disconnect</button>
+              </div>
+            ) : (
+              <button 
+                onClick={handleConnect}
+                className="bg-accent hover:bg-blue-400 text-white text-xs font-bold px-5 py-2.5 rounded-lg shadow-lg shadow-accent/20 transition-all"
+              >
+                Connect Wallet
+              </button>
+            )}
+            <button className="bg-white/10 hover:bg-white/20 text-white text-xs font-bold px-5 py-2.5 rounded-lg border border-border transition-all">
               New Transfer
             </button>
           </div>

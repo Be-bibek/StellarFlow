@@ -6,7 +6,7 @@
 # consumer hardware without these flags.
 # =============================================================================
 
-[build]
+[target.x86_64-pc-windows-msvc]
 # Windows (MSVC toolchain): disable incremental linking which can cause
 # stale symbol issues with proc-macro heavy crates like sqlx.
 # Linux / WSL alternative:

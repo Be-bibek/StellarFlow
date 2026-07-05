@@ -132,3 +132,6 @@ backend/transactions.json
 .vscode/
 *.swp
 *.swo
+
+# Confidential files
+coreconcept.md

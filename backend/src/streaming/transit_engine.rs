@@ -274,6 +274,7 @@ fn parse_soroban_event(raw: &serde_json::Value) -> Option<TransitEvent> {
 
     // Map Soroban event topics to TransitEventType.
     let (event_type, new_status) = match topic.as_str() {
+        "netting" => (TransitEventType::TransactionSettled, Some("SETTLED".into())),
         "routed" => (TransitEventType::PayoutRouted,    Some("STELLAR_LEDGER".into())),
         "approved" => (TransitEventType::ApprovalGranted, Some("ROUTING".into())),
         "settled" => (TransitEventType::TransactionSettled, Some("SETTLED".into())),
@@ -287,8 +288,11 @@ fn parse_soroban_event(raw: &serde_json::Value) -> Option<TransitEvent> {
         .get("transfer_id")
         .or_else(|| payload.get("tx_ref"))
         .and_then(|v| v.as_str())
-        .unwrap_or("unknown")
-        .to_string();
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| {
+            // Fallback to the ledger event ID if payload doesn't contain a transfer_id
+            raw.get("id").and_then(|v| v.as_str()).unwrap_or("unknown_event").to_string()
+        });
 
     let org_id = payload
         .get("org_id")
