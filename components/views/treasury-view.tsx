@@ -45,9 +45,11 @@ export function TreasuryView() {
       <TreasuryRouter />
 
       {/* On-Chain Contract Interaction Desk */}
-      <div className="w-full bg-white/[0.02] dark:bg-white/[0.02] border border-white/10 rounded-2xl p-6">
-        <ContractDesk />
-      </div>
+      <BentoCard delay={0.05} className="w-full" noPadding>
+        <div className="w-full bg-white dark:bg-white/[0.02] border-none rounded-2xl p-6">
+          <ContractDesk />
+        </div>
+      </BentoCard>
 
       <div className="flex flex-col md:flex-row gap-6 relative">
         {/* Main Table Container */}

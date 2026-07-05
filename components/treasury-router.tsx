@@ -58,17 +58,17 @@ export function TreasuryRouter() {
       {/* Dynamic Glow */}
       <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/30 to-purple-500/30 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200" />
       
-      <div className="relative bg-[#08060D]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 sm:p-8">
+      <div className="relative bg-white/80 dark:bg-[#08060D]/80 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl p-6 sm:p-8">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center p-[1px]">
-              <div className="w-full h-full bg-[#08060D] rounded-full flex items-center justify-center">
-                <ArrowRightLeft className="w-5 h-5 text-blue-400" />
+              <div className="w-full h-full bg-white dark:bg-[#08060D] rounded-full flex items-center justify-center">
+                <ArrowRightLeft className="w-5 h-5 text-blue-500 dark:text-blue-400" />
               </div>
             </div>
             <div>
-              <h3 className="text-xl font-bold text-white tracking-wide">Direct Transfer</h3>
-              <p className="text-sm text-slate-400">Level 1 Testnet Validation</p>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white tracking-wide">Direct Transfer</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Level 1 Testnet Validation</p>
             </div>
           </div>
           
@@ -76,7 +76,7 @@ export function TreasuryRouter() {
             <button
               onClick={handleConnect}
               type="button"
-              className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm font-medium rounded-lg transition-colors border border-white/10"
+              className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-900 border-slate-200 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white font-medium rounded-lg transition-colors border dark:border-white/10"
             >
               <Wallet className="w-4 h-4" /> Connect Freighter
             </button>
@@ -89,18 +89,18 @@ export function TreasuryRouter() {
 
         <form onSubmit={handleTransfer} className="space-y-5">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-300">Destination Public Key</label>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Destination Public Key</label>
             <input
               type="text"
               value={destination}
               onChange={(e) => setDestination(e.target.value)}
               placeholder="G..."
-              className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono text-sm"
+              className="w-full bg-white dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-mono text-sm"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-300">Amount (XLM)</label>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Amount (XLM)</label>
             <div className="relative">
               <input
                 type="number"
@@ -109,9 +109,9 @@ export function TreasuryRouter() {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="10.5"
-                className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                className="w-full bg-white dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
               />
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-medium">
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 font-medium">
                 XLM
               </div>
             </div>
@@ -123,14 +123,14 @@ export function TreasuryRouter() {
             className="w-full relative group overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 p-[1px] disabled:opacity-50 mt-4"
           >
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            <div className="relative bg-[#08060D] hover:bg-transparent transition-colors duration-300 rounded-xl px-4 py-3 flex items-center justify-center">
+            <div className="relative bg-white dark:bg-[#08060D] hover:bg-transparent dark:hover:bg-transparent transition-colors duration-300 rounded-xl px-4 py-3 flex items-center justify-center">
               {status === "loading" ? (
                 <>
-                  <Loader2 className="w-5 h-5 text-blue-400 animate-spin mr-2" />
-                  <span className="text-white font-medium">Processing...</span>
+                  <Loader2 className="w-5 h-5 text-blue-500 dark:text-blue-400 animate-spin mr-2" />
+                  <span className="text-slate-900 dark:text-white font-medium group-hover:text-white transition-colors duration-300">Processing...</span>
                 </>
               ) : (
-                <span className="text-white font-medium">Execute Transfer</span>
+                <span className="text-slate-900 dark:text-white font-medium group-hover:text-white transition-colors duration-300">Execute Transfer</span>
               )}
             </div>
           </button>

@@ -182,8 +182,8 @@ export function ContractDesk() {
       {/* ── Header ── */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-bold text-white">On-Chain Treasury Router</h3>
-          <p className="text-sm text-slate-400 mt-0.5">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">On-Chain Treasury Router</h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
             {deployed
               ? "Contract deployed · Soroban Testnet"
               : "Contract not deployed — run npm run deploy:contract"}
@@ -193,9 +193,9 @@ export function ContractDesk() {
           {deployed && (
             <button
               onClick={fetchContractState}
-              className="p-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-colors"
+              className="p-2 bg-slate-100 hover:bg-slate-200 border-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border dark:border-white/10 rounded-lg transition-colors"
             >
-              <RefreshCw className={`w-4 h-4 text-slate-400 ${refreshing ? "animate-spin" : ""}`} />
+              <RefreshCw className={`w-4 h-4 text-slate-600 dark:text-slate-400 ${refreshing ? "animate-spin" : ""}`} />
             </button>
           )}
           {!walletKey ? (
@@ -216,26 +216,26 @@ export function ContractDesk() {
       {/* ── Contract Info Bar ── */}
       {deployed && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-            <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Registered Vaults</p>
-            <p className="text-2xl font-bold text-white">{vaults.length}</p>
+          <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-4">
+            <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Registered Vaults</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">{vaults.length}</p>
           </div>
-          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-            <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Max Transfer</p>
-            <p className="text-2xl font-bold text-white">
+          <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-4">
+            <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Max Transfer</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">
               {maxLimit != null ? `${(Number(maxLimit) / 1e7).toLocaleString()} XLM` : "—"}
             </p>
           </div>
-          <div className="bg-white/5 border border-white/10 rounded-xl p-4 col-span-2 sm:col-span-1">
-            <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Network</p>
-            <p className="text-2xl font-bold text-blue-400">Testnet</p>
+          <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-4 col-span-2 sm:col-span-1">
+            <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Network</p>
+            <p className="text-2xl font-bold text-blue-500 dark:text-blue-400">Testnet</p>
           </div>
         </div>
       )}
 
       {/* ── Vault Matrix Visualiser ── */}
       {vaults.length > 0 && (
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+        <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-6">
           <p className="text-xs text-slate-500 uppercase tracking-wider mb-6">Credit-Netting Mesh (A→B→C→A)</p>
           <div className="flex flex-wrap items-end gap-3 justify-center">
             {vaults.map((vault, i) => (
@@ -256,19 +256,19 @@ export function ContractDesk() {
 
       <div className="grid sm:grid-cols-2 gap-6">
         {/* ── Register Vault Form ── */}
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+        <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-5">
-            <Zap className="w-4 h-4 text-blue-400" />
-            <h4 className="text-sm font-bold text-white">Register Vault Wallet</h4>
+            <Zap className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+            <h4 className="text-sm font-bold text-slate-900 dark:text-white">Register Vault Wallet</h4>
           </div>
           <form onSubmit={handleAddVault} className="space-y-4">
             <div>
-              <label className="text-xs text-slate-400 mb-1.5 block">Vault Address (G…)</label>
+              <label className="text-xs text-slate-700 dark:text-slate-400 mb-1.5 block">Vault Address (G…)</label>
               <input
                 value={newVault}
                 onChange={(e) => setNewVault(e.target.value)}
                 placeholder="GABCDEF..."
-                className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm font-mono placeholder-slate-600 focus:outline-none focus:border-blue-500 transition-colors"
+                className="w-full bg-slate-50 dark:bg-black/30 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2.5 text-slate-900 dark:text-white text-sm font-mono placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:border-blue-500 transition-colors"
               />
             </div>
             <button
@@ -285,23 +285,23 @@ export function ContractDesk() {
         </div>
 
         {/* ── JIT Route Payout Form ── */}
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+        <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-5">
-            <ArrowRight className="w-4 h-4 text-purple-400" />
-            <h4 className="text-sm font-bold text-white">JIT Route Payout</h4>
+            <ArrowRight className="w-4 h-4 text-purple-500 dark:text-purple-400" />
+            <h4 className="text-sm font-bold text-slate-900 dark:text-white">JIT Route Payout</h4>
           </div>
           <form onSubmit={handleRoutePayout} className="space-y-4">
             <div>
-              <label className="text-xs text-slate-400 mb-1.5 block">Destination Address</label>
+              <label className="text-xs text-slate-700 dark:text-slate-400 mb-1.5 block">Destination Address</label>
               <input
                 value={payoutDest}
                 onChange={(e) => setPayoutDest(e.target.value)}
                 placeholder="GABCDEF..."
-                className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm font-mono placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-colors"
+                className="w-full bg-slate-50 dark:bg-black/30 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2.5 text-slate-900 dark:text-white text-sm font-mono placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-colors"
               />
             </div>
             <div>
-              <label className="text-xs text-slate-400 mb-1.5 block">Amount (XLM)</label>
+              <label className="text-xs text-slate-700 dark:text-slate-400 mb-1.5 block">Amount (XLM)</label>
               <div className="relative">
                 <input
                   type="number"
@@ -310,7 +310,7 @@ export function ContractDesk() {
                   value={payoutAmount}
                   onChange={(e) => setPayoutAmount(e.target.value)}
                   placeholder="100"
-                  className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-colors pr-14"
+                  className="w-full bg-slate-50 dark:bg-black/30 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2.5 text-slate-900 dark:text-white text-sm placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-colors pr-14"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">XLM</span>
               </div>
