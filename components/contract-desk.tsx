@@ -134,7 +134,7 @@ export function ContractDesk({
   const fetchContractState = async () => {
     setRefreshing(true);
     const vaultList = await contractGetVaults();
-    setVaults(vaultList);
+    setVaults(Array.from(new Set(vaultList)));
     await onRefreshBalance();
     setRefreshing(false);
   };
@@ -149,6 +149,12 @@ export function ContractDesk({
   const handleAddVault = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!walletKey || !newVault) return;
+    
+    if (vaults.includes(newVault)) {
+      setVaultStatus({ msg: "This vault is already registered in the mesh.", type: "error" });
+      return;
+    }
+
     setLoading(true);
     setVaultStatus(null);
     const res = await contractAddVault(walletKey, newVault);
@@ -234,7 +240,7 @@ export function ContractDesk({
           <p className="text-xs text-slate-500 uppercase tracking-wider mb-6">Credit-Netting Mesh (A→B→C→A)</p>
           <div className="flex flex-wrap items-end gap-3 justify-center">
             {vaults.map((vault, i) => (
-              <React.Fragment key={vault}>
+              <React.Fragment key={`${vault}-${i}`}>
                 <VaultNode label={`Vault ${i + 1}`} address={vault} index={i} isActive />
                 {i < vaults.length - 1 && <FlowArrow animated={false} />}
               </React.Fragment>
