@@ -172,18 +172,18 @@ export function TreasuryRouter({ walletKey, balance, maxLimit, onConnect, onDisc
             </div>
           </div>
 
-          {/* Low Balance / Faucet Warning Option */}
-          {walletKey && parseFloat(balance || "0") < 20 && (
-            <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3.5 flex items-center justify-between text-xs text-amber-600 dark:text-amber-400">
+          {/* Faucet Funding Option (Always visible when connected) */}
+          {walletKey && (
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3.5 flex items-center justify-between text-xs text-blue-600 dark:text-blue-400">
               <div className="flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>Your wallet balance is low. Need Testnet funds?</span>
+                <AlertCircle className="w-4 h-4 shrink-0 text-blue-500" />
+                <span>Need Testnet funds? Add 10,000 XLM instantly.</span>
               </div>
               <button
                 type="button"
                 onClick={handleFundFaucet}
                 disabled={faucetLoading}
-                className="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded font-semibold transition-colors disabled:opacity-50 flex items-center gap-1 cursor-pointer shrink-0"
+                className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded font-semibold transition-colors disabled:opacity-50 flex items-center gap-1 cursor-pointer shrink-0"
               >
                 {faucetLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
                 Request 10k XLM
