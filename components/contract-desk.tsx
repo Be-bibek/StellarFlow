@@ -105,13 +105,25 @@ function FlowArrow({ animated }: { animated: boolean }) {
   );
 }
 
-// ── Main component ─────────────────────────────────────────────────────────────
-export function ContractDesk() {
+interface ContractDeskProps {
+  walletKey: string | null;
+  balance: string | null;
+  maxLimit: bigint | null;
+  onConnect: () => Promise<void>;
+  onDisconnect: () => void;
+  onRefreshBalance: () => Promise<void>;
+}
+
+export function ContractDesk({
+  walletKey,
+  balance,
+  maxLimit,
+  onConnect,
+  onDisconnect,
+  onRefreshBalance,
+}: ContractDeskProps) {
   const addTransaction = useTransactionStore((s) => s.addTransaction);
-  const [walletKey, setWalletKey] = useState<string | null>(null);
-  const [balance, setBalance] = useState<string | null>(null);
   const [vaults, setVaults] = useState<string[]>([]);
-  const [maxLimit, setMaxLimit] = useState<bigint | null>(null);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [deployed] = useState(isContractDeployed());
@@ -126,45 +138,20 @@ export function ContractDesk() {
   const [payoutStatus, setPayoutStatus] = useState<{ msg: string; type: string; hash?: string } | null>(null);
   const [payoutLoading, setPayoutLoading] = useState(false);
 
-  const fetchBalance = async (key: string) => {
-    try {
-      const bal = await fetchXlmBalance(key);
-      setBalance(bal);
-    } catch (e) {
-      console.error("Failed to fetch balance", e);
-    }
-  };
-
   const fetchContractState = async () => {
     setRefreshing(true);
-    const [vaultList, limit] = await Promise.all([contractGetVaults(), contractGetMaxLimit()]);
+    const vaultList = await contractGetVaults();
     setVaults(vaultList);
-    setMaxLimit(limit);
-    if (walletKey) {
-      await fetchBalance(walletKey);
-    }
+    await onRefreshBalance();
     setRefreshing(false);
   };
 
   useEffect(() => {
-    if (deployed) fetchContractState();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deployed, walletKey]);
-
-  const handleConnect = async () => {
-    try {
-      const key = await connectFreighterWallet();
-      setWalletKey(key);
-      await fetchBalance(key);
-    } catch (e: any) {
-      console.error(e);
+    if (deployed) {
+      fetchContractState();
     }
-  };
-
-  const handleDisconnect = () => {
-    setWalletKey(null);
-    setBalance(null);
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deployed]);
 
   const handleAddVault = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -239,7 +226,7 @@ export function ContractDesk() {
           )}
           {!walletKey ? (
             <button
-              onClick={handleConnect}
+              onClick={onConnect}
               className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors"
             >
               Connect Freighter
@@ -252,7 +239,7 @@ export function ContractDesk() {
                 <span className="font-bold text-slate-900 dark:text-white">{balance ? `${parseFloat(balance).toFixed(4)} XLM` : "Loading..."}</span>
               </div>
               <button
-                onClick={handleDisconnect}
+                onClick={onDisconnect}
                 className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 text-slate-600 dark:text-slate-400 text-xs font-semibold rounded-lg transition-colors"
               >
                 Disconnect

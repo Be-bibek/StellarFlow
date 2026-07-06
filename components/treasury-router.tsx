@@ -5,28 +5,25 @@ import { sendNativeTransaction, connectFreighterWallet } from "@/lib/stellar";
 import { Loader2, ArrowRightLeft, ExternalLink, AlertCircle, CheckCircle2, Wallet } from "lucide-react";
 import { useTransactionStore } from "@/lib/stores/transaction-store";
 
-export function TreasuryRouter() {
+interface TreasuryRouterProps {
+  walletKey: string | null;
+  balance: string | null;
+  maxLimit: bigint | null;
+  onConnect: () => Promise<void>;
+  onDisconnect: () => void;
+}
+
+export function TreasuryRouter({ walletKey, balance, maxLimit, onConnect, onDisconnect }: TreasuryRouterProps) {
   const addTransaction = useTransactionStore((s) => s.addTransaction);
-  const [publicKey, setPublicKey] = useState<string | null>(null);
   const [destination, setDestination] = useState("");
   const [amount, setAmount] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
   const [txHash, setTxHash] = useState("");
 
-  const handleConnect = async () => {
-    try {
-      const address = await connectFreighterWallet();
-      setPublicKey(address);
-    } catch (e: any) {
-      setStatus("error");
-      setMessage("Failed to connect Freighter: " + e.message);
-    }
-  };
-
   const handleTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!publicKey) {
+    if (!walletKey) {
       setStatus("error");
       setMessage("Please connect your Freighter wallet first.");
       return;
@@ -41,7 +38,7 @@ export function TreasuryRouter() {
     setMessage("Please sign the transaction in Freighter...");
     setTxHash("");
 
-    const result = await sendNativeTransaction(publicKey, destination, amount);
+    const result = await sendNativeTransaction(walletKey, destination, amount);
 
     if (result.success && result.hash) {
       setStatus("success");
@@ -56,7 +53,7 @@ export function TreasuryRouter() {
         amount: parseFloat(amount),
         assetCode: "native",
         destination: destination,
-        sourceBreakdown: { [publicKey]: amount },
+        sourceBreakdown: { [walletKey]: amount },
         status: "SETTLED",
         stellarTxHash: result.hash,
         recipientCount: 1,
@@ -91,17 +88,28 @@ export function TreasuryRouter() {
             </div>
           </div>
           
-          {!publicKey ? (
+          {!walletKey ? (
             <button
-              onClick={handleConnect}
+              onClick={onConnect}
               type="button"
               className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-900 border-slate-200 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white font-medium rounded-lg transition-colors border dark:border-white/10"
             >
               <Wallet className="w-4 h-4" /> Connect Freighter
             </button>
           ) : (
-            <div className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium rounded-md font-mono">
-              {publicKey.substring(0, 6)}...{publicKey.substring(publicKey.length - 4)}
+            <div className="flex items-center gap-2">
+              <div className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs rounded-lg font-mono flex items-center gap-2">
+                <span>{walletKey.substring(0, 6)}…{walletKey.slice(-4)}</span>
+                <span className="opacity-35 text-slate-400">|</span>
+                <span className="font-bold text-slate-900 dark:text-white">{balance ? `${parseFloat(balance).toFixed(4)} XLM` : "0.0000 XLM"}</span>
+              </div>
+              <button
+                onClick={onDisconnect}
+                type="button"
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 text-slate-600 dark:text-slate-400 text-xs font-semibold rounded-lg transition-colors"
+              >
+                Disconnect
+              </button>
             </div>
           )}
         </div>
@@ -119,7 +127,14 @@ export function TreasuryRouter() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Amount (XLM)</label>
+            <div className="flex justify-between items-center">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Amount (XLM)</label>
+              {walletKey && (
+                <span className="text-xs text-slate-400 font-mono">
+                  Max Limit: {maxLimit ? (Number(maxLimit) / 1e7).toLocaleString() : "1,000,000"} XLM
+                </span>
+              )}
+            </div>
             <div className="relative">
               <input
                 type="number"

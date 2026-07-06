@@ -7,10 +7,59 @@ import { Plus, Link as LinkIcon, Download, Search, ChevronRight, Lock, Key } fro
 import { useTreasuryStore } from '@/lib/stores/treasury-store';
 import { TreasuryRouter } from '@/components/treasury-router';
 import { ContractDesk } from '@/components/contract-desk';
+import { connectFreighterWallet, fetchXlmBalance, contractGetMaxLimit } from '@/lib/stellar';
 
 export function TreasuryView() {
   const [selectedWallet, setSelectedWallet] = useState<string | null>(null);
   
+  // Shared Freighter Wallet State
+  const [walletKey, setWalletKey] = useState<string | null>(null);
+  const [balance, setBalance] = useState<string | null>(null);
+  const [maxLimit, setMaxLimit] = useState<bigint | null>(null);
+
+  const fetchBalance = async (key: string) => {
+    try {
+      const bal = await fetchXlmBalance(key);
+      setBalance(bal);
+    } catch (e) {
+      console.error("Failed to fetch balance", e);
+    }
+  };
+
+  const handleConnect = async () => {
+    try {
+      const key = await connectFreighterWallet();
+      setWalletKey(key);
+      await fetchBalance(key);
+    } catch (e: any) {
+      console.error("Failed to connect Freighter", e);
+    }
+  };
+
+  const handleDisconnect = () => {
+    setWalletKey(null);
+    setBalance(null);
+  };
+
+  const refreshBalance = async () => {
+    if (walletKey) {
+      await fetchBalance(walletKey);
+    }
+  };
+
+  // Fetch max limit once
+  useEffect(() => {
+    const fetchLimit = async () => {
+      try {
+        const limit = await contractGetMaxLimit();
+        setMaxLimit(limit);
+      } catch (e) {
+        console.error("Failed to fetch max limit", e);
+      }
+    };
+    fetchLimit();
+  }, []);
+
   const wallets = useTreasuryStore((state) => state.wallets);
   const fetchWallets = useTreasuryStore((state) => state.fetchWallets);
   const isLoading = useTreasuryStore((state) => state.isLoading);
@@ -42,12 +91,25 @@ export function TreasuryView() {
         </div>
       </div>
 
-      <TreasuryRouter />
+      <TreasuryRouter 
+        walletKey={walletKey} 
+        balance={balance} 
+        maxLimit={maxLimit} 
+        onConnect={handleConnect} 
+        onDisconnect={handleDisconnect}
+      />
 
       {/* On-Chain Contract Interaction Desk */}
       <div className="grid grid-cols-1">
         <BentoCard delay={0.05} className="relative overflow-hidden w-full">
-          <ContractDesk />
+          <ContractDesk 
+            walletKey={walletKey} 
+            balance={balance} 
+            maxLimit={maxLimit} 
+            onConnect={handleConnect} 
+            onDisconnect={handleDisconnect}
+            onRefreshBalance={refreshBalance}
+          />
         </BentoCard>
       </div>
 
