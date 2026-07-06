@@ -118,9 +118,8 @@ pub async fn log_transaction(
     Json(payload): Json<CreateTransactionRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let org_id = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap_or_else(|_| Uuid::nil());
-    let amount_decimal = rust_decimal::Decimal::from_utf8_bytes(payload.amount.to_string().as_bytes())
-        .map(|d| sqlx::types::BigDecimal::from(d))
-        .unwrap_or_default();
+    use std::str::FromStr;
+    let amount_decimal = sqlx::types::BigDecimal::from_str(&payload.amount.to_string()).unwrap_or_default();
 
     sqlx::query(
         r#"
