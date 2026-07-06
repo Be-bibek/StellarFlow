@@ -22,22 +22,38 @@ export function TreasuryRouter({ walletKey, balance, maxLimit, onConnect, onDisc
   const [txHash, setTxHash] = useState("");
 
   const [faucetLoading, setFaucetLoading] = useState(false);
+  const [faucetAmount, setFaucetAmount] = useState("10000");
 
   const handleFundFaucet = async () => {
     if (!walletKey) return;
     setFaucetLoading(true);
     setStatus("idle");
     setMessage("");
+
+    const requested = parseInt(faucetAmount) || 10000;
+    const calls = Math.max(1, Math.min(10, Math.ceil(requested / 10000))); // Cap at 100k to prevent infinite loops
+
     try {
-      const res = await fetch(`https://friendbot.stellar.org/?addr=${walletKey}`);
-      if (!res.ok) throw new Error("Friendbot rate limit or network issue");
+      for (let i = 0; i < calls; i++) {
+        const res = await fetch(`https://friendbot.stellar.org/?addr=${walletKey}`);
+        if (!res.ok) {
+          if (res.status === 429) {
+            throw new Error("Friendbot Rate Limit: Stellar restricts Faucet requests to one per 10 seconds. Please wait before requesting more!");
+          }
+          throw new Error("Stellar Faucet is currently busy. Try again shortly.");
+        }
+        // Delay slightly between calls to satisfy rate limits
+        if (i < calls - 1) {
+          await new Promise((r) => setTimeout(r, 2000));
+        }
+      }
       await onConnect(); // Reload balance
       setStatus("success");
-      setMessage("Account funded with 10,000 Testnet XLM successfully!");
+      setMessage(`Successfully requested ${requested.toLocaleString()} Testnet XLM!`);
     } catch (e: any) {
       console.error(e);
       setStatus("error");
-      setMessage("Friendbot funding failed. Please try again in a few seconds.");
+      setMessage(e.message || "Stellar Faucet rate limit hit. Please wait 10 seconds before trying again.");
     }
     setFaucetLoading(false);
   };
@@ -174,20 +190,32 @@ export function TreasuryRouter({ walletKey, balance, maxLimit, onConnect, onDisc
 
           {/* Faucet Funding Option (Always visible when connected) */}
           {walletKey && (
-            <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3.5 flex items-center justify-between text-xs text-blue-600 dark:text-blue-400">
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-blue-600 dark:text-blue-400">
               <div className="flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0 text-blue-500" />
-                <span>Need Testnet funds? Add 10,000 XLM instantly.</span>
+                <span>Request Testnet XLM:</span>
               </div>
-              <button
-                type="button"
-                onClick={handleFundFaucet}
-                disabled={faucetLoading}
-                className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded font-semibold transition-colors disabled:opacity-50 flex items-center gap-1 cursor-pointer shrink-0"
-              >
-                {faucetLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
-                Request 10k XLM
-              </button>
+              <div className="flex items-center gap-2">
+                <select
+                  value={faucetAmount}
+                  onChange={(e) => setFaucetAmount(e.target.value)}
+                  className="bg-white dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded px-2.5 py-1 text-xs text-slate-800 dark:text-slate-200 outline-none font-mono"
+                >
+                  <option value="10000">10,000 XLM</option>
+                  <option value="20000">20,000 XLM</option>
+                  <option value="50000">50,000 XLM</option>
+                  <option value="100000">100,000 XLM</option>
+                </select>
+                <button
+                  type="button"
+                  onClick={handleFundFaucet}
+                  disabled={faucetLoading}
+                  className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded font-semibold transition-colors disabled:opacity-50 flex items-center gap-1 cursor-pointer shrink-0"
+                >
+                  {faucetLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                  Fund Account
+                </button>
+              </div>
             </div>
           )}
 
