@@ -135,3 +135,6 @@ backend/transactions.json
 
 # Confidential files
 coreconcept.md
+
+# Package lock (to prevent npm ci errors in Railway)
+package-lock.json
