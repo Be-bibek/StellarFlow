@@ -133,16 +133,6 @@ export function RoutingView({ onNavigate }: { onNavigate?: (view: any) => void }
               <label className="text-xs uppercase text-slate-500 dark:text-white/50 tracking-wider">
                 Recipient Address <span className="text-red-400">*</span>
               </label>
-              <button
-                onClick={() => {
-                  const key = "GCSANGCZM2L4RRHYNQXTH57Q4NM7NU4SIGOF2TQJQ2HSP73W4KVBYILP";
-                  setDestination(key);
-                  navigator.clipboard.writeText(key).catch(() => {});
-                }}
-                className="text-[10px] uppercase font-bold text-blue-500 hover:text-blue-600 dark:text-indigo-400 dark:hover:text-indigo-300 flex items-center gap-1.5 transition bg-blue-50/50 dark:bg-indigo-500/10 px-2 py-1 rounded"
-              >
-                <Copy className="w-3 h-3" /> Copy Admin Key
-              </button>
             </div>
             <div className="relative">
               <Target className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30" />
