@@ -137,13 +137,13 @@ export default function AppShell() {
 
   const navItems = [
     { id: 'dashboard',  label: 'Dashboard',             icon: Building2       },
-    { id: 'history',    label: 'Transaction History',    icon: History         },
     { id: 'treasury',   label: 'Treasury Center',        icon: Wallet          },
     { id: 'funding',    label: 'Funding Center',         icon: ArrowDownToLine },
     { id: 'routing',    label: 'Smart Routing',          icon: ArrowRightLeft  },
-    { id: 'batch',      label: 'Batch Transfers',        icon: FileBox         },
-    { id: 'transit',    label: 'Transit Center',         icon: ActivitySquare  },
     { id: 'governance', label: 'Multi-Sig Governance',   icon: ShieldCheck     },
+    { id: 'transit',    label: 'Transit Center',         icon: ActivitySquare  },
+    { id: 'history',    label: 'Transaction History',    icon: History         },
+    { id: 'batch',      label: 'Batch Transfers',        icon: FileBox         },
     { id: 'analytics',  label: 'Intelligence Analytics', icon: BarChart3       },
     { id: 'settings',   label: 'System Settings',        icon: Settings        },
   ] as const;
@@ -154,11 +154,11 @@ export default function AppShell() {
       case 'treasury': return <TreasuryView />;
       case 'routing': return <RoutingView onNavigate={setActiveView} />;
       case 'batch': return <BatchView />;
-      case 'transit':    return <TransitView />;
+      case 'transit':    return <TransitView onNavigate={setActiveView} />;
       case 'analytics':  return <AnalyticsView />;
       case 'settings':   return <SettingsView />;
       case 'history':    return <HistoryView />;
-      case 'governance': return <GovernanceView />;
+      case 'governance': return <GovernanceView onNavigate={setActiveView} />;
       case 'funding':    return <FundingView />;
       default: return <DashboardView />;
     }

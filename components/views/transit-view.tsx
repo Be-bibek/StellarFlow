@@ -365,7 +365,7 @@ const FILTER_TABS: FilterTab[] = ['All Active Transits', 'Completed Operations',
 // ─────────────────────────────────────────────────────────────────────────────
 // Main TransitView
 // ─────────────────────────────────────────────────────────────────────────────
-export function TransitView() {
+export function TransitView({ onNavigate }: { onNavigate?: (view: any) => void }) {
   const [activeTab, setActiveTab] = useState<FilterTab>('All Active Transits');
   const transactions = useTransactionStore((s) => s.transactions);
   const activePipeline = useTransactionStore((s) => s.activePipeline);
@@ -375,6 +375,19 @@ export function TransitView() {
   useEffect(() => {
     fetchTransactions();
   }, [fetchTransactions]);
+
+  // Auto-navigate to history when active pipeline finishes
+  const prevRunningRef = useRef(pipelineIsRunning);
+  useEffect(() => {
+    if (prevRunningRef.current && !pipelineIsRunning) {
+      if (onNavigate) {
+        setTimeout(() => {
+          onNavigate('history');
+        }, 3000); // 3 seconds delay to see the SETTLED state animation!
+      }
+    }
+    prevRunningRef.current = pipelineIsRunning;
+  }, [pipelineIsRunning, onNavigate]);
 
   // Build session list
   type Session = {

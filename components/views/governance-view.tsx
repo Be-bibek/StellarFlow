@@ -168,7 +168,7 @@ const AUDIT_ACTION_ICON: Record<string, string> = {
 // Panel A — Approval Inbox
 // ─────────────────────────────────────────────────────────────────────────────
 
-function ApprovalInbox({ onNavigateToAudit }: { onNavigateToAudit: (tid: string) => void }) {
+function ApprovalInbox({ onNavigateToAudit, onNavigate }: { onNavigateToAudit: (tid: string) => void; onNavigate?: (view: any) => void }) {
   const [pending, setPending] = useState<GovernanceRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionStates, setActionStates] = useState<Record<string, 'idle' | 'loading' | 'done'>>({});
@@ -197,6 +197,9 @@ function ApprovalInbox({ onNavigateToAudit }: { onNavigateToAudit: (tid: string)
     setActionStates(s => ({ ...s, [`${req.id}_approve`]: 'done' }));
     showToast(res.message ?? 'Approved!');
     await load();
+    if (onNavigate) {
+      setTimeout(() => onNavigate('transit'), 1500);
+    }
   };
 
   const handleReject = async (req: GovernanceRequest) => {
@@ -729,7 +732,7 @@ function AuditLogViewer({ initialTransferId }: { initialTransferId?: string }) {
 
 type GovernanceTab = 'inbox' | 'timeline' | 'audit';
 
-export function GovernanceView() {
+export function GovernanceView({ onNavigate }: { onNavigate?: (view: any) => void }) {
   const [activeTab, setActiveTab] = useState<GovernanceTab>('inbox');
   const [auditTransferId, setAuditTransferId] = useState<string | undefined>();
 
@@ -804,7 +807,7 @@ export function GovernanceView() {
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.18 }}
         >
-          {activeTab === 'inbox' && <ApprovalInbox onNavigateToAudit={navigateToAudit} />}
+          {activeTab === 'inbox' && <ApprovalInbox onNavigateToAudit={navigateToAudit} onNavigate={onNavigate} />}
           {activeTab === 'timeline' && <ApprovalTimeline />}
           {activeTab === 'audit' && <AuditLogViewer initialTransferId={auditTransferId} />}
         </motion.div>

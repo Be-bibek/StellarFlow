@@ -100,7 +100,7 @@ export function RoutingView({ onNavigate }: { onNavigate?: (view: 'dashboard' | 
     // Auto-navigate based on Governance gatekeeper outcome
     if (onNavigate) {
       if (status === 'PENDING_APPROVAL') {
-        onNavigate('multisig');
+        onNavigate('governance');
       } else {
         onNavigate('transit');
       }
