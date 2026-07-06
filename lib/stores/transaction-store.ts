@@ -224,30 +224,44 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
       const res = await fetch('/api/transactions');
       if (!res.ok) throw new Error('Failed to fetch transactions');
       const data = await res.json();
-      set({
-        transactions: data.map((t: any) => ({
-          id: t.id,
-          transferId: t.transfer_id,
-          orgId: "org-1",
-          status: t.status,
-          amount: t.amount,
-          assetCode: t.asset_code,
-          destination: t.recipient_count > 1 ? "Multiple" : "Unknown",
-          createdAt: t.created_at,
-          sourceBreakdown: t.source_breakdown,
-          stellarTxHash: t.stellar_tx_hash,
-          ledgerSequence: t.ledger_sequence,
-          recipientCount: t.recipient_count,
-          settledAt: t.settled_at,
-          failedAt: t.failed_at,
-          childTransfers: t.child_transfers?.map((c: any) => ({
-            publicKey: c.public_key,
-            amount: c.amount,
-            status: c.status,
-            stellarTxHash: c.stellar_tx_hash,
-            ledgerSequence: c.ledger_sequence,
-          })),
+      
+      // Load client-signed transactions from localStorage
+      let clientTxs: StellarTransaction[] = [];
+      if (typeof window !== "undefined") {
+        try {
+          const stored = localStorage.getItem("client_transactions");
+          if (stored) clientTxs = JSON.parse(stored);
+        } catch (err) {
+          console.error("Failed to parse client transactions", err);
+        }
+      }
+
+      const fetchedTxs = data.map((t: any) => ({
+        id: t.id,
+        transferId: t.transfer_id,
+        orgId: "org-1",
+        status: t.status,
+        amount: t.amount,
+        assetCode: t.asset_code,
+        destination: t.recipient_count > 1 ? "Multiple" : (t.destination || "Unknown"),
+        createdAt: t.created_at,
+        sourceBreakdown: t.source_breakdown,
+        stellarTxHash: t.stellar_tx_hash,
+        ledgerSequence: t.ledger_sequence,
+        recipientCount: t.recipient_count,
+        settledAt: t.settled_at,
+        failedAt: t.failed_at,
+        childTransfers: t.child_transfers?.map((c: any) => ({
+          publicKey: c.public_key,
+          amount: c.amount,
+          status: c.status,
+          stellarTxHash: c.stellar_tx_hash,
+          ledgerSequence: c.ledger_sequence,
         })),
+      }));
+
+      set({
+        transactions: [...clientTxs, ...fetchedTxs],
         isLoading: false,
       });
     } catch (e) {
@@ -257,9 +271,20 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
   },
 
   addTransaction: (tx) => {
-    set((state) => ({
-      transactions: [tx, ...state.transactions],
-    }));
+    set((state) => {
+      const updated = [tx, ...state.transactions];
+      if (typeof window !== "undefined") {
+        try {
+          const stored = localStorage.getItem("client_transactions");
+          const clientTxs = stored ? JSON.parse(stored) : [];
+          clientTxs.unshift(tx);
+          localStorage.setItem("client_transactions", JSON.stringify(clientTxs.slice(0, 50)));
+        } catch (err) {
+          console.error("Failed to save client transaction", err);
+        }
+      }
+      return { transactions: updated };
+    });
   },
 
   updateTransactionStatus: (transferId, status, meta) => {

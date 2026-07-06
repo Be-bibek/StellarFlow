@@ -22,6 +22,7 @@ import {
   connectFreighterWallet,
   isContractDeployed,
 } from "@/lib/stellar";
+import { useTransactionStore } from "@/lib/stores/transaction-store";
 
 // ── Error badge colours ────────────────────────────────────────────────────────
 const ERROR_TYPE_META: Record<string, { label: string; colour: string; Icon: React.ComponentType<{ className?: string }> }> = {
@@ -105,6 +106,7 @@ function FlowArrow({ animated }: { animated: boolean }) {
 
 // ── Main component ─────────────────────────────────────────────────────────────
 export function ContractDesk() {
+  const addTransaction = useTransactionStore((s) => s.addTransaction);
   const [walletKey, setWalletKey] = useState<string | null>(null);
   const [vaults, setVaults] = useState<string[]>([]);
   const [maxLimit, setMaxLimit] = useState<bigint | null>(null);
@@ -167,8 +169,25 @@ export function ContractDesk() {
     setPayoutStatus(null);
     const stroops = BigInt(Math.round(parseFloat(payoutAmount) * 1e7));
     const res = await contractRoutePayout(walletKey, stroops, payoutDest);
-    if (res.success) {
+    if (res.success && res.hash) {
       setPayoutStatus({ msg: "JIT Payout routed on-chain!", type: "success", hash: res.hash });
+      
+      // Log to client transaction history
+      addTransaction({
+        id: `client-${Date.now()}`,
+        transferId: `jit-${res.hash.substring(0, 8)}`,
+        orgId: "org-1",
+        amount: parseFloat(payoutAmount),
+        assetCode: "native",
+        destination: payoutDest,
+        sourceBreakdown: { [walletKey]: payoutAmount },
+        status: "SETTLED",
+        stellarTxHash: res.hash,
+        recipientCount: 1,
+        createdAt: new Date().toISOString(),
+        settledAt: new Date().toISOString(),
+      });
+
       setPayoutDest("");
       setPayoutAmount("");
     } else {

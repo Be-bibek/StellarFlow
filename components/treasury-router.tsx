@@ -3,8 +3,10 @@
 import React, { useState } from "react";
 import { sendNativeTransaction, connectFreighterWallet } from "@/lib/stellar";
 import { Loader2, ArrowRightLeft, ExternalLink, AlertCircle, CheckCircle2, Wallet } from "lucide-react";
+import { useTransactionStore } from "@/lib/stores/transaction-store";
 
 export function TreasuryRouter() {
+  const addTransaction = useTransactionStore((s) => s.addTransaction);
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [destination, setDestination] = useState("");
   const [amount, setAmount] = useState("");
@@ -45,6 +47,23 @@ export function TreasuryRouter() {
       setStatus("success");
       setMessage("Transfer successful!");
       setTxHash(result.hash);
+      
+      // Log to client transaction history
+      addTransaction({
+        id: `client-${Date.now()}`,
+        transferId: `direct-${result.hash.substring(0, 8)}`,
+        orgId: "org-1",
+        amount: parseFloat(amount),
+        assetCode: "native",
+        destination: destination,
+        sourceBreakdown: { [publicKey]: amount },
+        status: "SETTLED",
+        stellarTxHash: result.hash,
+        recipientCount: 1,
+        createdAt: new Date().toISOString(),
+        settledAt: new Date().toISOString(),
+      });
+
       setDestination("");
       setAmount("");
     } else {
