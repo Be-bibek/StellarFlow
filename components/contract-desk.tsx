@@ -18,7 +18,6 @@ import {
   contractGetMaxLimit,
   contractGetVaults,
   contractAddVault,
-  contractRoutePayout,
   connectFreighterWallet,
   isContractDeployed,
   fetchXlmBalance,
@@ -132,12 +131,6 @@ export function ContractDesk({
   const [newVault, setNewVault] = useState("");
   const [vaultStatus, setVaultStatus] = useState<{ msg: string; type: string; hash?: string } | null>(null);
 
-  // Route payout form
-  const [payoutDest, setPayoutDest] = useState("");
-  const [payoutAmount, setPayoutAmount] = useState("");
-  const [payoutStatus, setPayoutStatus] = useState<{ msg: string; type: string; hash?: string } | null>(null);
-  const [payoutLoading, setPayoutLoading] = useState(false);
-
   const fetchContractState = async () => {
     setRefreshing(true);
     const vaultList = await contractGetVaults();
@@ -167,40 +160,6 @@ export function ContractDesk({
       setVaultStatus({ msg: res.error ?? "Failed", type: res.errorType ?? "Unknown" });
     }
     setLoading(false);
-  };
-
-  const handleRoutePayout = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!walletKey || !payoutDest || !payoutAmount) return;
-    setPayoutLoading(true);
-    setPayoutStatus(null);
-    const stroops = BigInt(Math.round(parseFloat(payoutAmount) * 1e7));
-    const res = await contractRoutePayout(walletKey, stroops, payoutDest);
-    if (res.success && res.hash) {
-      setPayoutStatus({ msg: "JIT Payout routed on-chain!", type: "success", hash: res.hash });
-      
-      // Log to client transaction history
-      addTransaction({
-        id: `client-${Date.now()}`,
-        transferId: `jit-${res.hash.substring(0, 8)}`,
-        orgId: "org-1",
-        amount: parseFloat(payoutAmount),
-        assetCode: "native",
-        destination: payoutDest,
-        sourceBreakdown: { [walletKey]: payoutAmount },
-        status: "SETTLED",
-        stellarTxHash: res.hash,
-        recipientCount: 1,
-        createdAt: new Date().toISOString(),
-        settledAt: new Date().toISOString(),
-      });
-
-      setPayoutDest("");
-      setPayoutAmount("");
-    } else {
-      setPayoutStatus({ msg: res.error ?? "Failed", type: res.errorType ?? "Unknown" });
-    }
-    setPayoutLoading(false);
   };
 
   return (
@@ -290,7 +249,7 @@ export function ContractDesk({
         </div>
       )}
 
-      <div className="grid sm:grid-cols-2 gap-6">
+      <div className="max-w-xl mx-auto w-full">
         {/* ── Register Vault Form ── */}
         <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-5">
@@ -318,50 +277,6 @@ export function ContractDesk({
           </form>
 
           {vaultStatus && <StatusBanner status={vaultStatus} />}
-        </div>
-
-        {/* ── JIT Route Payout Form ── */}
-        <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-6">
-          <div className="flex items-center gap-2 mb-5">
-            <ArrowRight className="w-4 h-4 text-purple-500 dark:text-purple-400" />
-            <h4 className="text-sm font-bold text-slate-900 dark:text-white">JIT Route Payout</h4>
-          </div>
-          <form onSubmit={handleRoutePayout} className="space-y-4">
-            <div>
-              <label className="text-xs text-slate-700 dark:text-slate-400 mb-1.5 block">Destination Address</label>
-              <input
-                value={payoutDest}
-                onChange={(e) => setPayoutDest(e.target.value)}
-                placeholder="GABCDEF..."
-                className="w-full bg-slate-50 dark:bg-black/30 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2.5 text-slate-900 dark:text-white text-sm font-mono placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-colors"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-slate-700 dark:text-slate-400 mb-1.5 block">Amount (XLM)</label>
-              <div className="relative">
-                <input
-                  type="number"
-                  min="0"
-                  step="0.0000001"
-                  value={payoutAmount}
-                  onChange={(e) => setPayoutAmount(e.target.value)}
-                  placeholder="100"
-                  className="w-full bg-slate-50 dark:bg-black/30 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2.5 text-slate-900 dark:text-white text-sm placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-colors pr-14"
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">XLM</span>
-              </div>
-            </div>
-            <button
-              type="submit"
-              disabled={payoutLoading || !walletKey || !deployed || vaults.length === 0}
-              className="w-full py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 disabled:opacity-40 text-white text-sm font-medium rounded-lg transition-all flex items-center justify-center gap-2"
-            >
-              {payoutLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-              {payoutLoading ? "Executing Atomic Payout…" : "Execute JIT Payout"}
-            </button>
-          </form>
-
-          {payoutStatus && <StatusBanner status={payoutStatus} />}
         </div>
       </div>
     </div>
