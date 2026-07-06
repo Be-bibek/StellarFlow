@@ -178,7 +178,7 @@ export async function contractAddVault(
       .build();
 
     const sim = await SOROBAN_SERVER.simulateTransaction(tx);
-    if (SorobanRpc.Api.isSimulationError(sim)) {
+    if (rpc.Api.isSimulationError(sim)) {
       const code = parseInt(sim.error.replace(/\D/g, ""), 10);
       if (!isNaN(code) && code > 0) throw new ContractRevertError(code);
       throw new SimulationFailedError(sim.error);
@@ -240,7 +240,7 @@ export async function contractRoutePayout(
       .build();
 
     const sim = await SOROBAN_SERVER.simulateTransaction(tx);
-    if (SorobanRpc.Api.isSimulationError(sim)) {
+    if (rpc.Api.isSimulationError(sim)) {
       const code = parseInt(sim.error.replace(/\D/g, ""), 10);
       if (!isNaN(code) && code > 0) throw new ContractRevertError(code);
       throw new SimulationFailedError(sim.error);
