@@ -31,29 +31,42 @@ export function TreasuryRouter({ walletKey, balance, maxLimit, onConnect, onDisc
     setMessage("");
 
     const requested = parseInt(faucetAmount) || 10000;
-    const calls = Math.max(1, Math.min(10, Math.ceil(requested / 10000))); // Cap at 100k to prevent infinite loops
+    const calls = Math.max(1, Math.min(10, Math.ceil(requested / 10000))); // Cap at 100k
+    let successfulCalls = 0;
 
     try {
       for (let i = 0; i < calls; i++) {
         const res = await fetch(`https://friendbot.stellar.org/?addr=${walletKey}`);
-        if (!res.ok) {
-          if (res.status === 429) {
-            throw new Error("Friendbot Rate Limit: Stellar restricts Faucet requests to one per 10 seconds. Please wait before requesting more!");
-          }
-          throw new Error("Stellar Faucet is currently busy. Try again shortly.");
+        if (res.ok) {
+          successfulCalls++;
+        } else {
+          // If a rate limit or error is hit, break the loop and report partial success
+          console.warn(`Friendbot request ${i + 1} failed with status: ${res.status}`);
+          break;
         }
-        // Delay slightly between calls to satisfy rate limits
+        
+        // Stellar Testnet Faucet requires at least 5-6 seconds delay to prevent IP rate-limiting
         if (i < calls - 1) {
-          await new Promise((r) => setTimeout(r, 2000));
+          setMessage(`Funded ${(successfulCalls * 10000).toLocaleString()} XLM... Waiting 6s for next batch...`);
+          await new Promise((r) => setTimeout(r, 6000));
         }
       }
+
       await onConnect(); // Reload balance
-      setStatus("success");
-      setMessage(`Successfully requested ${requested.toLocaleString()} Testnet XLM!`);
+
+      if (successfulCalls === calls) {
+        setStatus("success");
+        setMessage(`Successfully added ${(successfulCalls * 10000).toLocaleString()} Testnet XLM to your wallet!`);
+      } else if (successfulCalls > 0) {
+        setStatus("success");
+        setMessage(`Partially funded ${(successfulCalls * 10000).toLocaleString()} XLM. Stellar rate-limited the rest. Please wait 10 seconds before requesting more!`);
+      } else {
+        throw new Error("Stellar Faucet rate limit reached. Please wait 10-15 seconds and try again.");
+      }
     } catch (e: any) {
       console.error(e);
       setStatus("error");
-      setMessage(e.message || "Stellar Faucet rate limit hit. Please wait 10 seconds before trying again.");
+      setMessage(e.message || "Stellar Faucet is currently busy. Please wait 10 seconds and try again.");
     }
     setFaucetLoading(false);
   };
