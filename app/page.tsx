@@ -143,8 +143,7 @@ export default function AppShell() {
     { id: 'routing',    label: 'Smart Routing',          icon: ArrowRightLeft  },
     { id: 'batch',      label: 'Batch Transfers',        icon: FileBox         },
     { id: 'transit',    label: 'Transit Center',         icon: ActivitySquare  },
-    { id: 'multisig',   label: 'Multi-Sig Approvals',    icon: ShieldCheck     },
-    { id: 'governance', label: 'Governance',             icon: ShieldCheck     },
+    { id: 'governance', label: 'Multi-Sig Governance',   icon: ShieldCheck     },
     { id: 'analytics',  label: 'Intelligence Analytics', icon: BarChart3       },
     { id: 'settings',   label: 'System Settings',        icon: Settings        },
   ] as const;
@@ -156,7 +155,6 @@ export default function AppShell() {
       case 'routing': return <RoutingView onNavigate={setActiveView} />;
       case 'batch': return <BatchView />;
       case 'transit':    return <TransitView />;
-      case 'multisig':   return <MultiSigView />;
       case 'analytics':  return <AnalyticsView />;
       case 'settings':   return <SettingsView />;
       case 'history':    return <HistoryView />;
