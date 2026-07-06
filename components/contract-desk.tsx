@@ -24,7 +24,7 @@ import {
 } from "@/lib/stellar";
 
 // ── Error badge colours ────────────────────────────────────────────────────────
-const ERROR_TYPE_META: Record<string, { label: string; colour: string; Icon: React.ElementType }> = {
+const ERROR_TYPE_META: Record<string, { label: string; colour: string; Icon: React.ComponentType<{ className?: string }> }> = {
   UserRejected:     { label: "User Rejected",      colour: "text-yellow-400 border-yellow-500/30 bg-yellow-500/10",  Icon: X },
   SimulationFailed: { label: "Simulation Failed",  colour: "text-orange-400 border-orange-500/30 bg-orange-500/10", Icon: ServerCrash },
   ContractRevert:   { label: "Contract Reverted",  colour: "text-red-400    border-red-500/30    bg-red-500/10",    Icon: ShieldAlert },
