@@ -21,6 +21,27 @@ export function TreasuryRouter({ walletKey, balance, maxLimit, onConnect, onDisc
   const [message, setMessage] = useState("");
   const [txHash, setTxHash] = useState("");
 
+  const [faucetLoading, setFaucetLoading] = useState(false);
+
+  const handleFundFaucet = async () => {
+    if (!walletKey) return;
+    setFaucetLoading(true);
+    setStatus("idle");
+    setMessage("");
+    try {
+      const res = await fetch(`https://friendbot.stellar.org/?addr=${walletKey}`);
+      if (!res.ok) throw new Error("Friendbot rate limit or network issue");
+      await onConnect(); // Reload balance
+      setStatus("success");
+      setMessage("Account funded with 10,000 Testnet XLM successfully!");
+    } catch (e: any) {
+      console.error(e);
+      setStatus("error");
+      setMessage("Friendbot funding failed. Please try again in a few seconds.");
+    }
+    setFaucetLoading(false);
+  };
+
   const handleTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!walletKey) {
@@ -150,6 +171,25 @@ export function TreasuryRouter({ walletKey, balance, maxLimit, onConnect, onDisc
               </div>
             </div>
           </div>
+
+          {/* Low Balance / Faucet Warning Option */}
+          {walletKey && parseFloat(balance || "0") < 20 && (
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3.5 flex items-center justify-between text-xs text-amber-600 dark:text-amber-400">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>Your wallet balance is low. Need Testnet funds?</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleFundFaucet}
+                disabled={faucetLoading}
+                className="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded font-semibold transition-colors disabled:opacity-50 flex items-center gap-1 cursor-pointer shrink-0"
+              >
+                {faucetLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                Request 10k XLM
+              </button>
+            </div>
+          )}
 
           <button
             type="submit"
