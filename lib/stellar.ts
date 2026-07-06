@@ -72,7 +72,7 @@ export async function sendNativeTransaction(
       .setTimeout(30)
       .build();
 
-    const signedResult = await signTransaction(transaction.toXDR(), { network: "TESTNET" });
+    const signedResult = await signTransaction(transaction.toXDR(), { networkPassphrase: NETWORK_PASSPHRASE });
 
     if (typeof signedResult === "object" && signedResult !== null && "error" in signedResult) {
       const errMsg = String((signedResult as any).error);
@@ -185,7 +185,7 @@ export async function contractAddVault(
     }
 
     const preparedTx = rpc.assembleTransaction(tx, sim).build();
-    const signedResult = await signTransaction(preparedTx.toXDR(), { network: "TESTNET" });
+    const signedResult = await signTransaction(preparedTx.toXDR(), { networkPassphrase: NETWORK_PASSPHRASE });
 
     if (typeof signedResult === "object" && signedResult !== null && "error" in signedResult) {
       const errMsg = String((signedResult as any).error);
@@ -247,7 +247,7 @@ export async function contractRoutePayout(
     }
 
     const preparedTx = rpc.assembleTransaction(tx, sim).build();
-    const signedResult = await signTransaction(preparedTx.toXDR(), { network: "TESTNET" });
+    const signedResult = await signTransaction(preparedTx.toXDR(), { networkPassphrase: NETWORK_PASSPHRASE });
 
     if (typeof signedResult === "object" && signedResult !== null && "error" in signedResult) {
       const errMsg = String((signedResult as any).error);
