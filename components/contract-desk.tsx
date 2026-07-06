@@ -21,6 +21,7 @@ import {
   contractRoutePayout,
   connectFreighterWallet,
   isContractDeployed,
+  fetchXlmBalance,
 } from "@/lib/stellar";
 import { useTransactionStore } from "@/lib/stores/transaction-store";
 
@@ -108,6 +109,7 @@ function FlowArrow({ animated }: { animated: boolean }) {
 export function ContractDesk() {
   const addTransaction = useTransactionStore((s) => s.addTransaction);
   const [walletKey, setWalletKey] = useState<string | null>(null);
+  const [balance, setBalance] = useState<string | null>(null);
   const [vaults, setVaults] = useState<string[]>([]);
   const [maxLimit, setMaxLimit] = useState<bigint | null>(null);
   const [loading, setLoading] = useState(false);
@@ -124,26 +126,44 @@ export function ContractDesk() {
   const [payoutStatus, setPayoutStatus] = useState<{ msg: string; type: string; hash?: string } | null>(null);
   const [payoutLoading, setPayoutLoading] = useState(false);
 
+  const fetchBalance = async (key: string) => {
+    try {
+      const bal = await fetchXlmBalance(key);
+      setBalance(bal);
+    } catch (e) {
+      console.error("Failed to fetch balance", e);
+    }
+  };
+
   const fetchContractState = async () => {
     setRefreshing(true);
     const [vaultList, limit] = await Promise.all([contractGetVaults(), contractGetMaxLimit()]);
     setVaults(vaultList);
     setMaxLimit(limit);
+    if (walletKey) {
+      await fetchBalance(walletKey);
+    }
     setRefreshing(false);
   };
 
   useEffect(() => {
     if (deployed) fetchContractState();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deployed]);
+  }, [deployed, walletKey]);
 
   const handleConnect = async () => {
     try {
       const key = await connectFreighterWallet();
       setWalletKey(key);
+      await fetchBalance(key);
     } catch (e: any) {
       console.error(e);
     }
+  };
+
+  const handleDisconnect = () => {
+    setWalletKey(null);
+    setBalance(null);
   };
 
   const handleAddVault = async (e: React.FormEvent) => {
@@ -225,8 +245,18 @@ export function ContractDesk() {
               Connect Freighter
             </button>
           ) : (
-            <div className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs rounded-lg font-mono">
-              {walletKey.substring(0, 6)}…{walletKey.slice(-4)}
+            <div className="flex items-center gap-2">
+              <div className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs rounded-lg font-mono flex items-center gap-2">
+                <span className="text-emerald-500 dark:text-emerald-400">{walletKey.substring(0, 6)}…{walletKey.slice(-4)}</span>
+                <span className="opacity-35 text-slate-400">|</span>
+                <span className="font-bold text-slate-900 dark:text-white">{balance ? `${parseFloat(balance).toFixed(4)} XLM` : "Loading..."}</span>
+              </div>
+              <button
+                onClick={handleDisconnect}
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 text-slate-600 dark:text-slate-400 text-xs font-semibold rounded-lg transition-colors"
+              >
+                Disconnect
+              </button>
             </div>
           )}
         </div>
