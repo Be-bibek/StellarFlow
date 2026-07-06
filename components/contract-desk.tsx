@@ -160,6 +160,23 @@ export function ContractDesk({
     const res = await contractAddVault(walletKey, newVault);
     if (res.success) {
       setVaultStatus({ msg: "Vault registered on-chain!", type: "success", hash: res.hash });
+      
+      // Store the vault registration event in the transaction history
+      addTransaction({
+        id: `vault_add_${Date.now()}`,
+        transferId: `v_add_${Math.random().toString(36).substring(7)}`,
+        orgId: "org-1",
+        amount: 0,
+        assetCode: "VAULT_ADD",
+        destination: newVault,
+        sourceBreakdown: { [walletKey]: "0" },
+        status: "SETTLED",
+        stellarTxHash: res.hash,
+        recipientCount: 1,
+        createdAt: new Date().toISOString(),
+        settledAt: new Date().toISOString(),
+      });
+
       setNewVault("");
       await fetchContractState();
     } else {
