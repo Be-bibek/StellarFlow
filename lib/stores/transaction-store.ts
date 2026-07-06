@@ -183,7 +183,7 @@ interface TransactionState {
   // Actions
   loadTransactions: (txs?: StellarTransaction[]) => void;
   fetchTransactions: () => Promise<void>;
-  addTransaction: (tx: StellarTransaction) => void;
+  addTransaction: (tx: StellarTransaction) => Promise<void>;
   updateTransactionStatus: (
     transferId: string,
     status: TransactionStatus,
@@ -270,21 +270,41 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
     }
   },
 
-  addTransaction: (tx) => {
-    set((state) => {
-      const updated = [tx, ...state.transactions];
+  addTransaction: async (tx) => {
+    set((state) => ({
+      transactions: [tx, ...state.transactions],
+    }));
+
+    try {
+      const res = await fetch("/api/transactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          transfer_id: tx.transferId,
+          amount: tx.amount,
+          asset_code: tx.assetCode,
+          destination: tx.destination,
+          source_breakdown: tx.sourceBreakdown,
+          status: tx.status,
+          stellar_tx_hash: tx.stellarTxHash || null,
+        }),
+      });
+      if (!res.ok) throw new Error("Database rejected transaction log");
+    } catch (err) {
+      console.warn("Failed to persist to PostgreSQL, falling back to localStorage", err);
       if (typeof window !== "undefined") {
         try {
           const stored = localStorage.getItem("client_transactions");
           const clientTxs = stored ? JSON.parse(stored) : [];
-          clientTxs.unshift(tx);
-          localStorage.setItem("client_transactions", JSON.stringify(clientTxs.slice(0, 50)));
-        } catch (err) {
-          console.error("Failed to save client transaction", err);
+          if (!clientTxs.some((t: any) => t.transferId === tx.transferId)) {
+            clientTxs.unshift(tx);
+            localStorage.setItem("client_transactions", JSON.stringify(clientTxs.slice(0, 50)));
+          }
+        } catch (localErr) {
+          console.error("Failed to save client transaction fallback", localErr);
         }
       }
-      return { transactions: updated };
-    });
+    }
   },
 
   updateTransactionStatus: (transferId, status, meta) => {

@@ -39,7 +39,7 @@ use crate::{
         approvals::{create_pending_approval, get_approval_detail, submit_signature},
         payments::{get_payment_status, handle_batch_payout},
         wallets::get_wallets,
-        transactions::get_transactions,
+        transactions::{get_transactions, log_transaction},
         jit::{simulate_jit, execute_jit},
         governance::{
             request_approval, approve_request, reject_request,
@@ -236,7 +236,7 @@ async fn main() -> anyhow::Result<()> {
         // Wallets
         .route("/wallets",                      get(get_wallets))
         // Transactions
-        .route("/transactions",                 get(get_transactions))
+        .route("/transactions",                 get(get_transactions).post(log_transaction))
         // JIT
         .route("/jit/simulate",                 post(simulate_jit))
         .route("/jit/execute",                  post(execute_jit))

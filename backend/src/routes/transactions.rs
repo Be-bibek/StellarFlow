@@ -13,6 +13,17 @@ use crate::{
 // DTOs
 // ─────────────────────────────────────────────────────────────────────────────
 
+#[derive(Debug, Deserialize)]
+pub struct CreateTransactionRequest {
+    pub transfer_id:      String,
+    pub amount:           f64,
+    pub asset_code:       String,
+    pub destination:      String,
+    pub source_breakdown: serde_json::Value,
+    pub status:           String,
+    pub stellar_tx_hash:  Option<String>,
+}
+
 #[derive(Debug, Serialize)]
 pub struct ChildTransferResponse {
     pub public_key:        String,
@@ -97,4 +108,39 @@ pub async fn get_transactions(
     }
 
     Ok(Json(response))
+}
+
+/// POST /api/v1/transactions
+///
+/// Logs a new client-signed transaction directly to PostgreSQL database.
+pub async fn log_transaction(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<CreateTransactionRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let org_id = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap_or_else(|_| Uuid::nil());
+    let amount_decimal = rust_decimal::Decimal::from_utf8_bytes(payload.amount.to_string().as_bytes())
+        .map(|d| sqlx::types::BigDecimal::from(d))
+        .unwrap_or_default();
+
+    sqlx::query(
+        r#"
+        INSERT INTO transactions (
+            transfer_id, org_id, amount, asset_code,
+            destination, source_breakdown, status, stellar_tx_hash, settled_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7::transaction_status, $8, NOW())
+        "#
+    )
+    .bind(&payload.transfer_id)
+    .bind(org_id)
+    .bind(amount_decimal)
+    .bind(&payload.asset_code)
+    .bind(&payload.destination)
+    .bind(&payload.source_breakdown)
+    .bind(&payload.status.to_lowercase())
+    .bind(&payload.stellar_tx_hash)
+    .execute(&state.db)
+    .await?;
+
+    Ok(Json(serde_json::json!({ "success": true })))
 }
