@@ -66,7 +66,7 @@ function AllocationNode({ alloc, index, total }: { alloc: JitAllocation; index: 
 // ─────────────────────────────────────────────────────────────────────────────
 // Main component
 // ─────────────────────────────────────────────────────────────────────────────
-export function RoutingView({ onNavigate }: { onNavigate?: (view: 'dashboard' | 'history' | 'treasury' | 'routing' | 'batch' | 'transit' | 'multisig' | 'analytics' | 'settings') => void } = {}) {
+export function RoutingView({ onNavigate }: { onNavigate?: (view: any) => void } = {}) {
   const [targetInput, setTargetInput] = useState('');
   const [urgency, setUrgency] = useState<'Economy' | 'Balanced' | 'Instant'>('Balanced');
   const [destination, setDestination] = useState('');
