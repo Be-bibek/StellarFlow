@@ -33,8 +33,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
       setWalletAddress(address);
       const bal = await fetchXlmBalance(address);
       setBalance(bal);
-    } catch (error) {
-      console.error("Wallet connection failed:", error);
+    } catch (error: any) {
+      if (error.message !== "WalletConnectionCancelled") {
+        console.error("Wallet connection failed:", error);
+      }
     }
   };
 

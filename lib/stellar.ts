@@ -36,6 +36,9 @@ import { openWalletModal } from "./stellar-kit";
 // ── Level 1: Wallet Connection ────────────────────────────────────────────────
 export async function connectFreighterWallet(): Promise<string> {
   const result = await openWalletModal();
+  if (!result.address) {
+    throw new Error("WalletConnectionCancelled");
+  }
   return result.address;
 }
 

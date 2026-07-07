@@ -32,7 +32,9 @@ export function TreasuryView() {
       setWalletKey(key);
       await fetchBalance(key);
     } catch (e: any) {
-      console.error("Failed to connect Freighter", e);
+      if (e.message !== "WalletConnectionCancelled") {
+        console.error("Failed to connect Freighter", e);
+      }
     }
   };
 

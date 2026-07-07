@@ -14,7 +14,8 @@ export async function openWalletModal(): Promise<{address: string, name: string}
     const { address } = await StellarWalletsKit.authModal();
     return { address, name: StellarWalletsKit.selectedModule?.productName || "Connected Wallet" };
   } catch (error) {
-    console.error("Failed to connect wallet via kit:", error);
-    throw error;
+    // Usually means the user closed the modal or rejected the connection request
+    console.warn("Wallet connection cancelled or failed:", error);
+    return { address: "", name: "" };
   }
 }
