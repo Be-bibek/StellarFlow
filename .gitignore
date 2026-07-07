@@ -138,3 +138,6 @@ coreconcept.md
 
 # Package lock (to prevent npm ci errors in Railway)
 package-lock.json
+
+.cursor/
+.cursorrules
