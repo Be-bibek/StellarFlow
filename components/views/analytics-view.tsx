@@ -53,7 +53,8 @@ export function AnalyticsView() {
     let total = 0;
     
     transactions.forEach(tx => {
-      const val = parseFloat(tx.amount.replace(/,/g, ''));
+      const amountStr = typeof tx.amount === 'string' ? tx.amount.replace(/,/g, '') : String(tx.amount);
+      const val = parseFloat(amountStr);
       if (!isNaN(val)) {
         assets[tx.asset] = (assets[tx.asset] || 0) + val;
         total += val;
