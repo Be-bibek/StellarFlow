@@ -19,7 +19,11 @@ import {
   User,
   LogOut,
   History,
-  ArrowDownToLine
+  ArrowDownToLine,
+  QrCode,
+  Copy,
+  ExternalLink,
+  Share2
 } from 'lucide-react';
 import { DashboardView } from '@/components/views/dashboard-view';
 import { TreasuryView } from '@/components/views/treasury-view';
@@ -244,24 +248,49 @@ export default function AppShell() {
       <RecruiterModals />
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex w-64 flex-shrink-0 border-r border-slate-200 dark:border-white/10 bg-white dark:bg-[#08060D] flex-col z-20 transition-colors duration-500">
-        <div className="p-4 border-b border-slate-200 dark:border-white/10 flex flex-col gap-4 transition-colors duration-500">
+        <div className="p-5 flex flex-col gap-6 transition-colors duration-500">
+          
+          {/* Logo */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 p-2 rounded-lg cursor-pointer hover:bg-slate-200 dark:hover:bg-white/10 w-full transition-colors">
-              <div className="h-8 w-8 rounded-md bg-blue-600 dark:bg-indigo-600 flex items-center justify-center font-bold text-white">
-                SF
+            <div className="flex items-center gap-3">
+              <div className="flex flex-col gap-0.5 mt-0.5">
+                <div className="w-5 h-1.5 bg-[#FF6B00] skew-x-[-30deg]" />
+                <div className="w-5 h-1.5 bg-[#FF6B00] skew-x-[-30deg] ml-1.5" />
               </div>
-              <div className="flex-1 overflow-hidden">
-                <div className="text-xs font-semibold truncate uppercase tracking-widest text-blue-500 dark:text-indigo-500 dark:text-blue-500 dark:text-indigo-400">StellarFlow</div>
-                <div className="text-[10px] text-slate-500 truncate">Mainnet: Online</div>
-              </div>
+              <span className="text-xl font-bold tracking-widest text-slate-900 dark:text-white uppercase">ZYRA</span>
             </div>
-            
             <button 
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="relative p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-white/10 transition-colors flex-shrink-0 ml-2"
+              className="relative p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-white/10 transition-colors flex-shrink-0"
             >
-                {theme === 'dark' ? <Sun className="w-4 h-4 text-yellow-500" /> : <Moon className="w-4 h-4 text-blue-500 dark:text-indigo-500" />}
+                {theme === 'dark' ? <Sun className="w-4 h-4 text-yellow-500" /> : <Moon className="w-4 h-4 text-[#FF6B00]" />}
             </button>
+          </div>
+
+          {/* Account Widget */}
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full overflow-hidden bg-orange-900 border border-orange-500/20 relative flex-shrink-0">
+                <div className="absolute inset-0 bg-[url('https://api.dicebear.com/7.x/identicon/svg?seed=zyra&backgroundColor=f97316')] bg-cover opacity-80 mix-blend-overlay" />
+                <div className="absolute bottom-0 right-0 w-4 h-4 bg-[#FF6B00] rounded-sm flex items-center justify-center shadow-lg border border-[#08060D]">
+                  <div className="w-2 h-2 rounded-full bg-[#08060D]" />
+                </div>
+              </div>
+              <div className="flex flex-col overflow-hidden">
+                <span className="text-[15px] font-semibold text-slate-900 dark:text-white truncate">My account</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate">xlm:GABC...2C3d</span>
+                <span className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">$16,801.50</span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2 mt-1">
+              {[QrCode, Copy, ExternalLink, Share2].map((Icon, i) => (
+                <button key={i} className="flex-1 h-8 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/5 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
+                  <Icon className="w-3.5 h-3.5" />
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
