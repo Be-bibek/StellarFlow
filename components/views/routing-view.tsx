@@ -6,6 +6,7 @@ import { BentoCard } from '@/components/ui/bento-card';
 import { Zap, GitMerge, Lock, Send, Target, ArrowRight, CheckCircle2, AlertTriangle, Loader2, Wallet, Copy } from 'lucide-react';
 import { useTreasuryStore, selectTotalBalance, JitAllocation } from '@/lib/stores/treasury-store';
 import { useTransactionStore } from '@/lib/stores/transaction-store';
+import { connectFreighterWallet, contractProposeTransfer } from '@/lib/stellar';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Wallet type colour system (matches WalletType enum in treasury-store.ts)
@@ -88,24 +89,43 @@ export function RoutingView({ onNavigate }: { onNavigate?: (view: any) => void }
     if (!jitSimulation || pipelineIsRunning) return;
     if (!isValidDestination) return;
 
-    // Convert array of allocations to SourceBreakdown object
-    const breakdown = jitSimulation.allocations.reduce((acc, alloc) => {
-      acc[alloc.publicKey] = alloc.amount.toString();
-      return acc;
-    }, {} as Record<string, string>);
+    try {
+      // 1. Connect Freighter
+      const wallet = await connectFreighterWallet();
+      
+      // 2. The amount requested in the simulation
+      const amount = jitSimulation.target;
+      
+      // 3. Determine required approvals based on policy (like Governance view used to do)
+      const reqApprovals = amount < 1000 ? 0 : amount < 10000 ? 1 : 2;
+      
+      // 4. Admin public key 
+      const admin = process.env.NEXT_PUBLIC_DEPLOYER_PUBLIC_KEY || "GAICQ6KXUWZPJFWDWECQWNQTMDHHZKOEBI7PJ4FUJS6HG6K5FDFD5S6F";
 
-    // We don't need to generate a transferId locally anymore, the backend does it
-    const status = await executeJit(jitSimulation.target, breakdown, destination.trim());
-    
-    // Auto-navigate based on Governance gatekeeper outcome
-    if (onNavigate) {
-      if (status === 'PENDING_APPROVAL') {
-        onNavigate('governance');
-      } else {
-        onNavigate('transit');
+      // 5. Submit on-chain proposal
+      await contractProposeTransfer(
+        admin,
+        destination.trim(),
+        BigInt(Math.floor(amount * 10000000)), // Convert XLM to stroops
+        reqApprovals
+      );
+
+      // Wait for ledger
+      await new Promise(r => setTimeout(r, 4000));
+
+      // Auto-navigate to governance (if approval needed) or transit (if auto-executed)
+      if (onNavigate) {
+        if (reqApprovals > 0) {
+          onNavigate('governance');
+        } else {
+          onNavigate('transit');
+        }
       }
+    } catch (e: any) {
+      console.error("Proposal failed:", e);
+      alert("Failed to submit proposal: " + e.message);
     }
-  }, [jitSimulation, pipelineIsRunning, executeJit, onNavigate]);
+  }, [jitSimulation, pipelineIsRunning, destination, onNavigate]);
 
   const parsedAmount = parseFloat(targetInput.replace(/,/g, '')) || 0;
   const isOverLimit = parsedAmount > totalBalance;

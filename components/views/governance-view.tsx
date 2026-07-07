@@ -167,10 +167,7 @@ function ApprovalInbox({ onNavigateToAudit, onNavigate }: { onNavigateToAudit: (
   const [loading, setLoading] = useState(true);
   const [actionStates, setActionStates] = useState<Record<string, 'idle' | 'loading' | 'done'>>({});
   const [toast, setToast] = useState<string | null>(null);
-  const [newAmount, setNewAmount] = useState('');
-  const [newPurpose, setNewPurpose] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [submitResult, setSubmitResult] = useState<any>(null);
+
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -209,44 +206,6 @@ function ApprovalInbox({ onNavigateToAudit, onNavigate }: { onNavigateToAudit: (
     showToast('Rejection is not explicitly supported on-chain yet.');
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const amount = parseFloat(newAmount);
-    if (isNaN(amount) || amount <= 0) return;
-    setSubmitting(true);
-    setSubmitResult(null);
-    try {
-      const wallet = await connectFreighterWallet();
-      const admin = process.env.NEXT_PUBLIC_DEPLOYER_PUBLIC_KEY || "GAICQ6KXUWZPJFWDWECQWNQTMDHHZKOEBI7PJ4FUJS6HG6K5FDFD5S6F";
-      const destination = 'GATWXA5AROAPLEYNWFN6COAI4AK7NIQZAWA2FQMOO56IMJAQZEEWGZNA';
-      const reqApprovals = amount < 1000 ? 0 : amount < 10000 ? 1 : 2;
-      
-      await contractProposeTransfer(
-        admin, 
-        destination, 
-        BigInt(Math.floor(amount * 10000000)), // XLM to stroops as BigInt
-        reqApprovals
-      );
-      
-      setSubmitResult({
-        status: reqApprovals === 0 ? 'SETTLED' : 'PENDING_APPROVAL',
-        transfer_id: 'ONCHAIN-TX',
-        message: 'Successfully submitted to Soroban Smart Contract',
-        auto_executed: reqApprovals === 0
-      });
-      showToast('Transfer submitted! Waiting for ledger...');
-      
-      // Wait for the Stellar ledger to close (~3-5 seconds) before reloading
-      await new Promise(r => setTimeout(r, 4000));
-    } catch (e: any) {
-      console.error(e);
-      showToast('Submit failed: ' + e.message);
-    }
-    setSubmitting(false);
-    setNewAmount('');
-    setNewPurpose('');
-    await load();
-  };
 
   return (
     <div className="space-y-6">
@@ -264,81 +223,6 @@ function ApprovalInbox({ onNavigateToAudit, onNavigate }: { onNavigateToAudit: (
         )}
       </AnimatePresence>
 
-      {/* Submit Transfer for Approval */}
-      <BentoCard className="flex flex-col p-6">
-        <div className="flex items-center gap-3 mb-5">
-          <div className="p-2 rounded-xl bg-violet-500/10">
-            <Send className="w-5 h-5 text-violet-400" />
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Submit Transfer for Governance</h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Policy: &lt;1000 XLM = auto-execute · 1000–9999 = 1 approval · 10000+ = 2 approvals
-            </p>
-          </div>
-        </div>
-        <form onSubmit={handleSubmit} className="flex flex-wrap gap-3 items-end">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-slate-500">Amount (XLM)</label>
-            <input
-              type="number"
-              min="0.01"
-              step="0.01"
-              value={newAmount}
-              onChange={e => setNewAmount(e.target.value)}
-              required
-              placeholder="e.g. 500 or 1500 or 12000"
-              className="w-48 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-violet-500 transition-colors"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-slate-500">Purpose (optional)</label>
-            <input
-              type="text"
-              value={newPurpose}
-              onChange={e => setNewPurpose(e.target.value)}
-              placeholder="e.g. Q2 Payroll"
-              className="w-44 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-violet-500 transition-colors"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors"
-          >
-            {submitting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-            {submitting ? 'Submitting…' : 'Submit'}
-          </button>
-          <button
-            type="button"
-            onClick={load}
-            className="p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </button>
-        </form>
-
-        {/* Submit Result */}
-        <AnimatePresence>
-          {submitResult && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="mt-4 p-4 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs font-mono text-slate-600 dark:text-slate-300 overflow-auto max-h-32"
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <StatusBadge status={submitResult.status ?? 'PENDING_APPROVAL'} />
-                <span className="text-slate-400">{submitResult.transfer_id}</span>
-              </div>
-              <p>{submitResult.message}</p>
-              {submitResult.auto_executed && (
-                <p className="text-purple-400 mt-1">🤖 Auto-executed via JIT engine — no approval needed.</p>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </BentoCard>
 
       {/* Pending Approvals */}
       <BentoCard delay={0.1} className="flex flex-col p-6">
