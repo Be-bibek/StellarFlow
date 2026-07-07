@@ -426,7 +426,7 @@ export function TransitView({ onNavigate }: { onNavigate?: (view: any) => void }
       id: deriveSessionId(tx, i),
       amount: tx.amount,
       status: tx.status,
-      walletCount: Object.keys(tx.sourceBreakdown).length,
+      walletCount: tx.sourceBreakdown ? Object.keys(tx.sourceBreakdown).length : 0,
       blockHeight: '8841829',
       baseFee: '0.00010',
       createdAt: tx.createdAt,

@@ -115,6 +115,11 @@ export function RoutingView({ onNavigate }: { onNavigate?: (view: any) => void }
       }
 
       // Add to Transit Center (Local Simulation tracking)
+      const breakdown = jitSimulation.allocations.reduce((acc: any, alloc) => {
+        acc[alloc.walletId] = alloc.amount.toString();
+        return acc;
+      }, {});
+
       useTransactionStore.getState().addTransaction({
         id: `t-${response.proposalId || Date.now()}`,
         transferId: `ONCHAIN-PROP-${response.proposalId || Date.now()}`,
@@ -122,7 +127,7 @@ export function RoutingView({ onNavigate }: { onNavigate?: (view: any) => void }
         amount,
         assetCode: "native",
         destination: destination.trim(),
-        sourceBreakdown: jitSimulation.breakdown,
+        sourceBreakdown: breakdown,
         status: reqApprovals > 0 ? "AUTHORIZING" : "SETTLED",
         stellarTxHash: response.hash,
         createdAt: new Date().toISOString(),
