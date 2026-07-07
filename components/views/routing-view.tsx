@@ -127,6 +127,7 @@ export function RoutingView({ onNavigate }: { onNavigate?: (view: any) => void }
         amount,
         assetCode: "native",
         destination: destination.trim(),
+        recipientCount: 1,
         sourceBreakdown: breakdown,
         status: reqApprovals > 0 ? "AUTHORIZING" : "SETTLED",
         stellarTxHash: response.hash,

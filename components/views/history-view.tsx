@@ -222,7 +222,7 @@ function TxRowCard({ tx, index }: { tx: StellarTransaction; index: number }) {
               {[
                 { label: 'Network',      value: 'Stellar Mainnet',                    color: 'text-emerald-600 dark:text-emerald-400' },
                 { label: 'Asset',        value: tx.assetCode === 'native' ? 'XLM (native)' : tx.assetCode, color: 'text-slate-600 dark:text-white/65' },
-                { label: 'Recipients',   value: tx.recipientCount.toString(),          color: 'text-slate-600 dark:text-white/65' },
+                { label: 'Recipients',   value: (tx.recipientCount || 1).toString(),          color: 'text-slate-600 dark:text-white/65' },
                 { label: 'Block Height', value: tx.ledgerSequence ? `#${tx.ledgerSequence.toLocaleString()}` : '—', color: 'text-slate-600 dark:text-white/65' },
                 { label: 'Tx Hash',      value: tx.stellarTxHash ? tx.stellarTxHash.slice(0, 12) + '…' : '—', color: 'text-purple-600 dark:text-purple-400' },
                 { label: 'Settled',      value: tx.settledAt ? new Date(tx.settledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—', color: 'text-slate-600 dark:text-white/65' },
