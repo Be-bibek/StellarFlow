@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BentoCard } from '@/components/ui/bento-card';
 import { ArrowUpRight, ArrowDownRight, Activity, Shield, MoreHorizontal, ExternalLink, ArrowRightLeft, QrCode, Copy, Share2, Clock } from 'lucide-react';
+import { QRCodeSVG as QRCode } from 'qrcode.react';
 import { useTreasuryStore } from '@/lib/stores/treasury-store';
 import { useTransactionStore } from '@/lib/stores/transaction-store';
 
