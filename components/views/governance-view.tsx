@@ -98,18 +98,28 @@ async function fetchPending(): Promise<GovernanceRequest[]> {
 }
 
 async function fetchHistory(): Promise<HistoryItem[]> {
-  const r = await fetch(`${API}/approvals/history?limit=50`);
-  if (!r.ok) return [];
-  return r.json();
+  try {
+    const r = await fetch(`${API}/approvals/history?limit=50`);
+    if (!r.ok) return [];
+    return r.json();
+  } catch (e) {
+    console.error("Failed to fetch history:", e);
+    return [];
+  }
 }
 
 async function fetchAuditLogs(transferId?: string): Promise<AuditLog[]> {
-  const url = transferId
-    ? `${API}/audit/logs?transfer_id=${encodeURIComponent(transferId)}&limit=200`
-    : `${API}/audit/logs?limit=200`;
-  const r = await fetch(url);
-  if (!r.ok) return [];
-  return r.json();
+  try {
+    const url = transferId
+      ? `${API}/audit/logs?transfer_id=${encodeURIComponent(transferId)}&limit=200`
+      : `${API}/audit/logs?limit=200`;
+    const r = await fetch(url);
+    if (!r.ok) return [];
+    return r.json();
+  } catch (e) {
+    console.error("Failed to fetch audit logs:", e);
+    return [];
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

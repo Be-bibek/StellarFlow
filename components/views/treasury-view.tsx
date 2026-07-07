@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import { BentoCard } from '@/components/ui/bento-card';
 import { Plus, Link as LinkIcon, Download, Search, ChevronRight, Lock, Key } from 'lucide-react';
 import { useTreasuryStore } from '@/lib/stores/treasury-store';
-import { TreasuryRouter } from '@/components/treasury-router';
 import { ContractDesk } from '@/components/contract-desk';
 import { connectFreighterWallet, fetchXlmBalance, contractGetMaxLimit } from '@/lib/stellar';
 
@@ -93,16 +92,14 @@ export function TreasuryView() {
         </div>
       </div>
 
-      <TreasuryRouter 
-        walletKey={walletKey} 
-        balance={balance} 
-        maxLimit={maxLimit} 
-        onConnect={handleConnect} 
-        onDisconnect={handleDisconnect}
-      />
-
       {/* On-Chain Contract Interaction Desk */}
-      <div className="grid grid-cols-1">
+      <div className="grid grid-cols-1 mt-4">
+        <div className="flex items-center gap-3 mb-4">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-800 dark:text-[#F8FAFC]">On-Chain Treasury Router</h2>
+          <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 bg-blue-100 text-blue-700 dark:bg-indigo-500/20 dark:text-indigo-300 rounded-full border border-blue-200 dark:border-indigo-500/30">
+            Future updates are coming
+          </span>
+        </div>
         <BentoCard delay={0.05} className="relative overflow-hidden w-full">
           <ContractDesk 
             walletKey={walletKey} 

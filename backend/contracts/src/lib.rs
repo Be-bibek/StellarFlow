@@ -438,10 +438,10 @@ mod tests {
         assert_eq!(proposal_id, 1u32);
 
         let proposal = client.get_proposal(&proposal_id);
-        assert_eq!(proposal.amount, 500_000_i128);
-        assert_eq!(proposal.required, 2u32);
-        assert!(!proposal.executed);
-        assert_eq!(proposal.approvers.len(), 0u32);
+        assert_eq!(proposal.clone().unwrap().amount, 500_000_i128);
+        assert_eq!(proposal.clone().unwrap().required, 2u32);
+        assert!(!proposal.clone().unwrap().executed);
+        assert_eq!(proposal.unwrap().approvers.len(), 0u32);
     }
 
     #[test]

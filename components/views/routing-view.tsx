@@ -115,10 +115,19 @@ export function RoutingView({ onNavigate }: { onNavigate?: (view: any) => void }
       }
 
       // Add to Transit Center (Local Simulation tracking)
-      const breakdown = jitSimulation.allocations.reduce((acc: any, alloc) => {
-        acc[alloc.walletId] = alloc.amount.toString();
+      const breakdown = jitSimulation.allocations.reduce((acc: any, alloc: any) => {
+        acc[alloc.publicKey] = alloc.amount.toString();
         return acc;
       }, {});
+
+      // Deduct balances from treasury store
+      const treasuryState = useTreasuryStore.getState();
+      jitSimulation.allocations.forEach((alloc: any) => {
+        const wallet = treasuryState.wallets.find(w => w.id === alloc.walletId);
+        if (wallet) {
+          treasuryState.updateBalance(wallet.id, wallet.balance - alloc.amount);
+        }
+      });
 
       useTransactionStore.getState().addTransaction({
         id: `t-${response.proposalId || Date.now()}`,
@@ -129,22 +138,16 @@ export function RoutingView({ onNavigate }: { onNavigate?: (view: any) => void }
         destination: destination.trim(),
         recipientCount: 1,
         sourceBreakdown: breakdown,
-        status: reqApprovals > 0 ? "AUTHORIZING" : "SETTLED",
+        status: "AUTHORIZING", // Always authorizing/proposed until backend auto-executes required=0
         stellarTxHash: response.hash,
         createdAt: new Date().toISOString(),
       });
 
       // Wait for ledger
       await new Promise(r => setTimeout(r, 4000));
-
-      // Auto-navigate to governance (if approval needed) or transit (if auto-executed)
-      if (onNavigate) {
-        if (reqApprovals > 0) {
-          onNavigate('governance');
-        } else {
-          onNavigate('transit');
-        }
-      }
+      
+      // Auto-navigate removed so user stays on page
+      
     } catch (e: any) {
       console.error("Proposal failed:", e);
       alert("Failed to submit proposal: " + e.message);

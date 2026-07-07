@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Building2, 
@@ -36,6 +36,7 @@ import { SettingsView } from '@/components/views/settings-view';
 import { HistoryView } from '@/components/views/history-view';
 import { GovernanceView } from '@/components/views/governance-view';
 import { FundingView } from '@/components/views/funding-view';
+import { TransferView } from '@/components/views/transfer-view';
 import { useTheme } from 'next-themes';
 import { auth, googleProvider, db } from '@/lib/firebase';
 import { signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
@@ -47,9 +48,10 @@ import { BootSequence } from '@/components/BootSequence';
 import { IntroScreen } from '@/components/IntroScreen';
 import { RecruiterModals } from '@/components/RecruiterModals';
 import { AccountSwitcherModal } from '@/components/ui/account-switcher-modal';
+import Carousel from '@/components/ui/carousel';
 import GooeyNav from '@/components/ui/gooey-nav';
 
-type ActiveView = 'dashboard' | 'history' | 'treasury' | 'routing' | 'batch' | 'transit' | 'multisig' | 'analytics' | 'settings' | 'governance' | 'funding';
+type ActiveView = 'dashboard' | 'transfer' | 'history' | 'treasury' | 'routing' | 'batch' | 'transit' | 'multisig' | 'analytics' | 'settings' | 'governance' | 'funding';
 
 const ACCOUNT_COLORS = [
   '0ea5e9', // sky-500
@@ -79,10 +81,34 @@ export default function AppShell() {
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [copyToast, setCopyToast] = useState(false);
   
-  const { accounts, activeAccountId, fetchXlmPrice } = useAccountStore();
+  const { accounts, activeAccountId, fetchXlmPrice, setActiveAccount } = useAccountStore();
   const activeAccount = accounts.find(a => a.id === activeAccountId) || accounts[0];
   
   const activeColor = getAccountColor(activeAccount?.id);
+
+  const carouselItems = useMemo(() => {
+    return accounts.map(acc => {
+      const iconColor = getAccountColor(acc.id);
+      return {
+        id: acc.id,
+        title: acc.name || 'My account',
+        description: `xlm:${acc.publicKey.slice(0, 4)}...${acc.publicKey.slice(-4)} • $${(acc.balanceUsd || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
+        icon: (
+          <div className="w-full h-full flex items-center justify-center relative">
+            <div className="absolute inset-0 opacity-20 rounded-full" style={{ backgroundColor: `#${iconColor}` }} />
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="relative z-10" style={{ filter: `drop-shadow(0 0 4px #${iconColor}80)` }}>
+              <path d="M12 3C7 3 3 7 3 12C3 12 4.5 11 6 12C7.5 13 9 11 10.5 12C12 13 13.5 11 15 12C16.5 13 18 11 19.5 12C21 13 21 12 21 12C21 7 17 3 12 3Z" fill={`#${iconColor}`} />
+              <path d="M6 12C6 16 4 19 4 21" stroke={`#${iconColor}`} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M10.5 12C10.5 16 9 19 9 22" stroke={`#${iconColor}`} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M13.5 12C13.5 16 15 19 15 22" stroke={`#${iconColor}`} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M18 12C18 16 20 19 20 21" stroke={`#${iconColor}`} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+        )
+      };
+    });
+  }, [accounts]);
+
   const [activeView, setActiveView] = useState<ActiveView>('dashboard');
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -172,12 +198,13 @@ export default function AppShell() {
 
   const navItems = [
     { id: 'dashboard',  label: 'Dashboard',             icon: Building2       },
-    { id: 'treasury',   label: 'Treasury Center',        icon: Wallet          },
+    { id: 'transfer',   label: 'Direct Transfer',        icon: ArrowRightLeft  },
     { id: 'funding',    label: 'Funding Center',         icon: ArrowDownToLine },
     { id: 'routing',    label: 'Smart Routing',          icon: ArrowRightLeft  },
     { id: 'governance', label: 'Multi-Sig Governance',   icon: ShieldCheck     },
     { id: 'transit',    label: 'Transit Center',         icon: ActivitySquare  },
     { id: 'history',    label: 'Transaction History',    icon: History         },
+    { id: 'treasury',   label: 'Treasury Center',        icon: Wallet          },
     { id: 'batch',      label: 'Batch Transfers',        icon: FileBox         },
     { id: 'analytics',  label: 'Intelligence Analytics', icon: BarChart3       },
     { id: 'settings',   label: 'System Settings',        icon: Settings        },
@@ -185,17 +212,18 @@ export default function AppShell() {
 
   const renderView = () => {
     switch (activeView) {
-      case 'dashboard': return <DashboardView />;
-      case 'treasury': return <TreasuryView />;
-      case 'routing': return <RoutingView onNavigate={setActiveView} />;
-      case 'batch': return <BatchView />;
-      case 'transit':    return <TransitView onNavigate={setActiveView} />;
-      case 'analytics':  return <AnalyticsView />;
-      case 'settings':   return <SettingsView />;
-      case 'history':    return <HistoryView />;
+      case 'dashboard': return <DashboardView onNavigate={setActiveView} />;
+      case 'transfer':  return <TransferView />;
+      case 'treasury':  return <TreasuryView />;
+      case 'routing':   return <RoutingView onNavigate={setActiveView} />;
+      case 'batch':     return <BatchView />;
+      case 'transit':   return <TransitView onNavigate={setActiveView} />;
+      case 'analytics': return <AnalyticsView />;
+      case 'settings':  return <SettingsView />;
+      case 'history':   return <HistoryView />;
       case 'governance': return <GovernanceView onNavigate={setActiveView} />;
-      case 'funding':    return <FundingView />;
-      default: return <DashboardView />;
+      case 'funding':   return <FundingView />;
+      default: return <DashboardView onNavigate={setActiveView} />;
     }
   };
 

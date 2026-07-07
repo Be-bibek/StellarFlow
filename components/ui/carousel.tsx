@@ -18,6 +18,7 @@ export interface CarouselProps {
   pauseOnHover?: boolean;
   loop?: boolean;
   round?: boolean;
+  onPositionChange?: (index: number) => void;
 }
 
 const DEFAULT_ITEMS: CarouselItem[] = [
@@ -109,7 +110,8 @@ export default function Carousel({
   autoplayDelay = 3000,
   pauseOnHover = false,
   loop = false,
-  round = false
+  round = false,
+  onPositionChange
 }: CarouselProps): JSX.Element {
   const containerPadding = 16;
   const itemWidth = baseWidth - containerPadding * 2;
@@ -140,6 +142,15 @@ export default function Carousel({
       };
     }
   }, [pauseOnHover]);
+
+  useEffect(() => {
+    if (onPositionChange) {
+      const actualIndex = loop 
+        ? (position === 0 ? items.length - 1 : position === itemsForRender.length - 1 ? 0 : position - 1)
+        : position;
+      onPositionChange(actualIndex);
+    }
+  }, [position, loop, items.length, itemsForRender.length, onPositionChange]);
 
   useEffect(() => {
     if (!autoplay || itemsForRender.length <= 1) return undefined;

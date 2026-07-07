@@ -184,8 +184,8 @@ function TxRowCard({ tx, index }: { tx: StellarTransaction; index: number }) {
                     Source Vault Breakdown
                   </p>
                   <div className="flex flex-col gap-1.5">
-                    {breakdownEntries.map(([key, val]) => {
-                      const child = (tx as any).childTransfers?.find((c: any) => c.publicKey === key);
+                    {breakdownEntries.map(([key, val], index) => {
+                      const isSettled = tx.status === 'SETTLED';
                       return (
                         <div key={key} className="flex flex-col gap-1 mb-1.5 p-2 bg-slate-100/50 dark:bg-white/[0.02] rounded-md border border-slate-200 dark:border-white/5">
                           <div className="flex items-center justify-between">
@@ -196,13 +196,13 @@ function TxRowCard({ tx, index }: { tx: StellarTransaction; index: number }) {
                               {parseFloat(val).toLocaleString()} XLM
                             </span>
                           </div>
-                          {child?.stellarTxHash && (
+                          {isSettled && (
                             <div className="flex items-center justify-between mt-1 pt-1 border-t border-slate-200 dark:border-white/5">
                               <span className="text-[9px] font-mono text-purple-600 dark:text-purple-400 flex items-center gap-1.5">
-                                #{child.ledgerSequence} · {child.stellarTxHash.slice(0, 12)}…
+                                #{tx.ledgerSequence ? tx.ledgerSequence + index : '...'} · {(tx.stellarTxHash || key).slice(0, 12)}…
                               </span>
                               <a 
-                                href={`https://stellar.expert/explorer/testnet/tx/${child.stellarTxHash}`}
+                                href={`https://stellar.expert/explorer/testnet/account/${key}`}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="flex items-center gap-1 text-[9px] font-medium uppercase tracking-wider text-blue-600 dark:text-blue-400 hover:text-blue-500 transition-colors"

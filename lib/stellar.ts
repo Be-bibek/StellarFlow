@@ -412,7 +412,19 @@ export async function contractApproveProposal(
 
     if (response.status === "ERROR") throw new Error("Approval submission failed");
 
-    // sendTransaction only returns PENDING, so we assume it was submitted successfully if it reaches here
+    // Poll for status
+    let txStatus = await SOROBAN_SERVER.getTransaction(response.hash);
+    let attempts = 0;
+    while (txStatus.status === "NOT_FOUND" && attempts < 10) {
+      await new Promise(r => setTimeout(r, 2000));
+      txStatus = await SOROBAN_SERVER.getTransaction(response.hash);
+      attempts++;
+    }
+
+    if (txStatus.status === "FAILED") {
+      throw new Error("Ledger rejected transaction. Details: " + JSON.stringify(txStatus.resultMetaXdr));
+    }
+
     return { success: true, executed: false, hash: response.hash };
   } catch (err: any) {
     if (err instanceof UserRejectedError)     return { success: false, error: err.message, errorType: "UserRejected" };
