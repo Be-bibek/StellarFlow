@@ -191,8 +191,8 @@ function ApprovalInbox({ onNavigateToAudit, onNavigate }: { onNavigateToAudit: (
       const response = await contractApproveProposal(wallet, admin, Number(req.id));
       if (!response.success) throw new Error(response.error);
       
-      const currentApprovals = Number(req.metadata?.current_approvals) || 0;
-      const requiredApprovals = Number(req.metadata?.required_approvals) || 2;
+      const currentApprovals = Number(req.current_approvals) || 0;
+      const requiredApprovals = Number(req.required_approvals) || 2;
       const isLastApproval = currentApprovals + 1 >= requiredApprovals;
       
       if (isLastApproval) {
