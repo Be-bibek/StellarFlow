@@ -34,7 +34,8 @@ export function AnalyticsView() {
       const dayIndex = date.getDay() === 0 ? 6 : date.getDay() - 1;
       const dayName = days[dayIndex];
       
-      const val = parseFloat(tx.amount.replace(/,/g, ''));
+      const amountStr = typeof tx.amount === 'string' ? tx.amount.replace(/,/g, '') : String(tx.amount);
+      const val = parseFloat(amountStr);
       if (!isNaN(val)) {
         if (tx.type === 'Outgoing') {
            buckets[dayName].spend += val;

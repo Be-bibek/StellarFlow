@@ -117,7 +117,7 @@ export function TreasuryRouter({ walletKey, balance, maxLimit, onConnect, onDisc
               type="button"
               className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-900 border-slate-200 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white font-medium rounded-lg transition-colors border dark:border-white/10"
             >
-              <Wallet className="w-4 h-4" /> Connect Freighter
+              <Wallet className="w-4 h-4" /> Connect Wallet
             </button>
           ) : (
             <div className="flex items-center gap-2">
