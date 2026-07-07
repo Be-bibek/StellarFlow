@@ -190,7 +190,7 @@ function ApprovalInbox({ onNavigateToAudit, onNavigate }: { onNavigateToAudit: (
     try {
       const wallet = await connectFreighterWallet();
       const admin = process.env.NEXT_PUBLIC_DEPLOYER_PUBLIC_KEY || "GAICQ6KXUWZPJFWDWECQWNQTMDHHZKOEBI7PJ4FUJS6HG6K5FDFD5S6F";
-      await contractApproveProposal(wallet.address, admin, Number(req.id));
+      await contractApproveProposal(wallet, admin, Number(req.id));
       showToast('Approved! Waiting for ledger to settle...');
       await new Promise(r => setTimeout(r, 4000));
     } catch (e: any) {

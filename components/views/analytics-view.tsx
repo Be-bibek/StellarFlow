@@ -29,19 +29,16 @@ export function AnalyticsView() {
     }, {} as Record<string, any>);
 
     transactions.forEach(tx => {
-      const date = new Date(tx.date);
+      const date = new Date(tx.createdAt || new Date());
       // Map JS day to our days array
       const dayIndex = date.getDay() === 0 ? 6 : date.getDay() - 1;
       const dayName = days[dayIndex];
       
-      const amountStr = typeof tx.amount === 'string' ? tx.amount.replace(/,/g, '') : String(tx.amount);
+      const amountStr = String(tx.amount).replace(/,/g, '');
       const val = parseFloat(amountStr);
       if (!isNaN(val) && dayName && buckets[dayName]) {
-        if (tx.type === 'Outgoing') {
-           buckets[dayName].spend += val;
-        } else {
-           buckets[dayName].alloc += val;
-        }
+        // All StellarTransactions in the system are Outgoing (Treasury payouts)
+        buckets[dayName].spend += val;
       }
     });
 
@@ -53,10 +50,11 @@ export function AnalyticsView() {
     let total = 0;
     
     transactions.forEach(tx => {
-      const amountStr = typeof tx.amount === 'string' ? tx.amount.replace(/,/g, '') : String(tx.amount);
+      const amountStr = String(tx.amount).replace(/,/g, '');
       const val = parseFloat(amountStr);
       if (!isNaN(val)) {
-        assets[tx.asset] = (assets[tx.asset] || 0) + val;
+        const asset = tx.assetCode || 'XLM';
+        assets[asset] = (assets[asset] || 0) + val;
         total += val;
       }
     });
@@ -143,7 +141,7 @@ export function AnalyticsView() {
                      </Pie>
                      <Tooltip 
                        contentStyle={{ backgroundColor: tooltipBg, borderColor: tooltipBorder, borderRadius: '8px', color: tooltipColor }}
-                       formatter={(val: number) => `${val}%`}
+                       formatter={(val: any) => `${val}%`}
                      />
                    </PieChart>
                  </ResponsiveContainer>

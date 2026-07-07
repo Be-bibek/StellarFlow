@@ -401,7 +401,7 @@ export async function contractApproveProposal(
     // The approver signs to authorize their vote entry (accountToSign = approver)
     const signedResult = await signTransaction(preparedTx.toXDR(), {
       networkPassphrase: NETWORK_PASSPHRASE,
-      accountToSign: approverPublicKey,
+      address: approverPublicKey,
     });
 
     if (typeof signedResult === "object" && signedResult !== null && "error" in signedResult) {
@@ -417,9 +417,8 @@ export async function contractApproveProposal(
 
     if (response.status === "ERROR") throw new Error("Approval submission failed");
 
-    // executed = true means threshold was reached and contract auto-ran the payout
-    const didExecute = response.status === "SUCCESS";
-    return { success: true, executed: didExecute, hash: response.hash };
+    // sendTransaction only returns PENDING, so we assume it was submitted successfully if it reaches here
+    return { success: true, executed: false, hash: response.hash };
   } catch (err: any) {
     if (err instanceof UserRejectedError)     return { success: false, error: err.message, errorType: "UserRejected" };
     if (err instanceof SimulationFailedError) return { success: false, error: err.message, errorType: "SimulationFailed" };
