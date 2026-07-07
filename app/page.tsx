@@ -41,17 +41,48 @@ import { auth, googleProvider, db } from '@/lib/firebase';
 import { signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { doc, getDocFromServer, setDoc, query, collection, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { useTransactionStore } from '@/lib/stores/transaction-store';
+import { useAccountStore } from '@/lib/stores/account-store';
 
 import { BootSequence } from '@/components/BootSequence';
 import { IntroScreen } from '@/components/IntroScreen';
 import { RecruiterModals } from '@/components/RecruiterModals';
+import { AccountSwitcherModal } from '@/components/ui/account-switcher-modal';
 import GooeyNav from '@/components/ui/gooey-nav';
 
 type ActiveView = 'dashboard' | 'history' | 'treasury' | 'routing' | 'batch' | 'transit' | 'multisig' | 'analytics' | 'settings' | 'governance' | 'funding';
 
+const ACCOUNT_COLORS = [
+  '0ea5e9', // sky-500
+  '8b5cf6', // violet-500
+  'ec4899', // pink-500
+  'f59e0b', // amber-500
+  '10b981', // emerald-500
+  'f43f5e', // rose-500
+  '6366f1', // indigo-500
+  '14b8a6', // teal-500
+  'd946ef', // fuchsia-500
+  '84cc16', // lime-500
+  'f97316', // orange-500
+  '06b6d4', // cyan-500
+];
+
+const getAccountColor = (id: string | undefined) => {
+  if (!id) return '0ea5e9';
+  const charSum = id.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  return ACCOUNT_COLORS[charSum % ACCOUNT_COLORS.length];
+};
+
 export default function AppShell() {
   const [introFinished, setIntroFinished] = useState(false);
   const [bootFinished, setBootFinished] = useState(false);
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+  const [qrModalOpen, setQrModalOpen] = useState(false);
+  const [copyToast, setCopyToast] = useState(false);
+  
+  const { accounts, activeAccountId, fetchXlmPrice } = useAccountStore();
+  const activeAccount = accounts.find(a => a.id === activeAccountId) || accounts[0];
+  
+  const activeColor = getAccountColor(activeAccount?.id);
   const [activeView, setActiveView] = useState<ActiveView>('dashboard');
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -187,6 +218,10 @@ export default function AppShell() {
       });
       setNotifications(notifs);
     });
+
+    // Also fetch XLM price on mount
+    fetchXlmPrice();
+
     return () => unsubscribe();
   }, [user]);
 
@@ -244,8 +279,48 @@ export default function AppShell() {
   }
 
   return (
-    <div className="flex h-screen w-full bg-transparent overflow-hidden">
+    <div className="flex h-screen w-full bg-transparent overflow-hidden relative">
       <RecruiterModals />
+      <AccountSwitcherModal isOpen={isAccountModalOpen} onClose={() => setIsAccountModalOpen(false)} />
+      
+      {/* QR Modal */}
+      <AnimatePresence>
+        {qrModalOpen && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setQrModalOpen(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="relative bg-white dark:bg-[#110E1C] p-6 rounded-2xl shadow-2xl border border-slate-200 dark:border-white/10 flex flex-col items-center gap-4"
+            >
+              <h3 className="font-bold text-slate-900 dark:text-white">Receive to {activeAccount?.name}</h3>
+              <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${activeAccount?.publicKey}`} alt="QR Code" className="w-48 h-48 rounded-lg bg-white p-2" />
+              <p className="text-xs font-mono text-slate-500 break-all max-w-[200px] text-center">{activeAccount?.publicKey}</p>
+              <button onClick={() => setQrModalOpen(false)} className="w-full py-2 bg-slate-100 dark:bg-white/5 rounded-lg text-sm font-semibold hover:bg-slate-200 dark:hover:bg-white/10 transition-colors text-slate-900 dark:text-white">Close</button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Copy Toast */}
+      <AnimatePresence>
+        {copyToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[300] bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-4 py-2 rounded-lg shadow-xl text-sm font-semibold"
+          >
+            Copied to clipboard!
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex w-64 flex-shrink-0 border-r border-slate-200 dark:border-white/10 bg-white dark:bg-[#08060D] flex-col z-20 transition-colors duration-500">
         <div className="p-5 flex flex-col gap-6 transition-colors duration-500">
@@ -253,43 +328,100 @@ export default function AppShell() {
           {/* Logo */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex flex-col gap-0.5 mt-0.5">
-                <div className="w-5 h-1.5 bg-[#FF6B00] skew-x-[-30deg]" />
-                <div className="w-5 h-1.5 bg-[#FF6B00] skew-x-[-30deg] ml-1.5" />
+              <div className="flex flex-col gap-0.5 mt-0.5 relative">
+                <div className="absolute inset-0 bg-blue-400 blur-md opacity-50 rounded-full" />
+                <div className="w-6 h-1.5 bg-cyan-400 skew-x-[-30deg] relative z-10 shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
+                <div className="w-6 h-1.5 bg-blue-500 skew-x-[-30deg] ml-2 relative z-10 shadow-[0_0_10px_rgba(59,130,246,0.8)]" />
               </div>
-              <span className="text-xl font-bold tracking-widest text-slate-900 dark:text-white uppercase">ZYRA</span>
+              <span className="text-xl font-bold tracking-widest text-slate-900 dark:text-white uppercase drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]">StellarFlow</span>
             </div>
             <button 
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               className="relative p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-white/10 transition-colors flex-shrink-0"
             >
-                {theme === 'dark' ? <Sun className="w-4 h-4 text-yellow-500" /> : <Moon className="w-4 h-4 text-[#FF6B00]" />}
+                {theme === 'dark' ? <Sun className="w-4 h-4 text-yellow-500" /> : <Moon className="w-4 h-4 text-cyan-500" />}
             </button>
           </div>
 
           {/* Account Widget */}
           <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full overflow-hidden bg-orange-900 border border-orange-500/20 relative flex-shrink-0">
-                <div className="absolute inset-0 bg-[url('https://api.dicebear.com/7.x/identicon/svg?seed=zyra&backgroundColor=f97316')] bg-cover opacity-80 mix-blend-overlay" />
-                <div className="absolute bottom-0 right-0 w-4 h-4 bg-[#FF6B00] rounded-sm flex items-center justify-center shadow-lg border border-[#08060D]">
+            <div 
+              className="flex items-center gap-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-white/5 p-2 -m-2 rounded-xl transition-colors"
+              onClick={() => setIsAccountModalOpen(true)}
+            >
+              <div className="w-12 h-12 rounded-full overflow-hidden bg-slate-900 border border-slate-500/30 relative flex-shrink-0 shadow-[0_0_15px_rgba(59,130,246,0.2)] flex items-center justify-center">
+                <div className="absolute inset-0 opacity-20" style={{ backgroundColor: `#${activeColor}` }} />
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="relative z-10" style={{ filter: `drop-shadow(0 0 4px #${activeColor}80)` }}>
+                  <path d="M12 3C7 3 3 7 3 12C3 12 4.5 11 6 12C7.5 13 9 11 10.5 12C12 13 13.5 11 15 12C16.5 13 18 11 19.5 12C21 13 21 12 21 12C21 7 17 3 12 3Z" fill={`#${activeColor}`} />
+                  <path d="M6 12C6 16 4 19 4 21" stroke={`#${activeColor}`} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M10.5 12C10.5 16 9 19 9 22" stroke={`#${activeColor}`} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M13.5 12C13.5 16 15 19 15 22" stroke={`#${activeColor}`} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M18 12C18 16 20 19 20 21" stroke={`#${activeColor}`} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <div className="absolute bottom-0 right-0 w-4 h-4 rounded-sm flex items-center justify-center border border-[#08060D] z-20" style={{ backgroundColor: `#${activeColor}` }}>
                   <div className="w-2 h-2 rounded-full bg-[#08060D]" />
                 </div>
               </div>
               <div className="flex flex-col overflow-hidden">
-                <span className="text-[15px] font-semibold text-slate-900 dark:text-white truncate">My account</span>
-                <span className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate">xlm:GABC...2C3d</span>
-                <span className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">$16,801.50</span>
+                <span className="text-[15px] font-semibold text-slate-900 dark:text-white truncate">{activeAccount?.name || 'My account'}</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate">xlm:{activeAccount?.publicKey.slice(0, 4)}...{activeAccount?.publicKey.slice(-4)}</span>
+                <span className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">${(activeAccount?.balanceUsd || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
               </div>
             </div>
 
             {/* Action Buttons */}
             <div className="flex items-center gap-2 mt-1">
-              {[QrCode, Copy, ExternalLink, Share2].map((Icon, i) => (
-                <button key={i} className="flex-1 h-8 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/5 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
-                  <Icon className="w-3.5 h-3.5" />
-                </button>
-              ))}
+              <button 
+                onClick={() => setQrModalOpen(true)}
+                className="flex-1 h-8 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/5 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+                title="Show QR Code"
+              >
+                <QrCode className="w-3.5 h-3.5" />
+              </button>
+              <button 
+                onClick={() => {
+                  if (activeAccount?.publicKey) {
+                    navigator.clipboard.writeText(activeAccount.publicKey);
+                    setCopyToast(true);
+                    setTimeout(() => setCopyToast(false), 2000);
+                  }
+                }}
+                className="flex-1 h-8 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/5 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+                title="Copy Address"
+              >
+                <Copy className="w-3.5 h-3.5" />
+              </button>
+              <button 
+                onClick={() => {
+                  if (activeAccount?.publicKey) {
+                    window.open(`https://stellar.expert/explorer/testnet/account/${activeAccount.publicKey}`, '_blank');
+                  }
+                }}
+                className="flex-1 h-8 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/5 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+                title="Open in Explorer"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+              </button>
+              <button 
+                onClick={async () => {
+                  if (activeAccount?.publicKey && navigator.share) {
+                    try {
+                      await navigator.share({
+                        title: 'My Stellar Address',
+                        text: `Send XLM to my address: ${activeAccount.publicKey}`,
+                      });
+                    } catch (e) {
+                      console.log('Share canceled or failed');
+                    }
+                  } else {
+                    alert('Web Share API not supported on this browser.');
+                  }
+                }}
+                className="flex-1 h-8 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/5 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+                title="Share Address"
+              >
+                <Share2 className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
         </div>
