@@ -10,8 +10,8 @@ if (typeof window !== "undefined") {
 
 export async function openWalletModal(): Promise<{address: string, name: string}> {
   try {
-    const { address } = await StellarWalletsKit.getAddress();
-    return { address, name: "Connected Wallet" };
+    const { address } = await StellarWalletsKit.authModal();
+    return { address, name: StellarWalletsKit.selectedModule?.productName || "Connected Wallet" };
   } catch (error) {
     console.error("Failed to connect wallet via kit:", error);
     throw error;
