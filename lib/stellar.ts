@@ -461,7 +461,8 @@ export async function fetchAllOnChainProposals(): Promise<any[]> {
     
     // 4. Map and filter executed or missing proposals
     return simulationResults
-      .map(sim => {
+      .map((sim, index) => {
+        const id = index + 1;
         if (rpc.Api.isSimulationError(sim) || !sim.result?.retval) return null;
         const val = scValToNative(sim.result.retval);
         // Returns undefined if the Option is None in Rust
