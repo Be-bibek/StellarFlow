@@ -320,11 +320,14 @@ impl TreasuryRouter {
     // -----------------------------------------------------------------------
     // View Functions
     // -----------------------------------------------------------------------
-    pub fn get_proposal(env: Env, proposal_id: u32) -> Proposal {
+    pub fn get_proposal(env: Env, proposal_id: u32) -> Option<Proposal> {
         env.storage()
             .instance()
             .get(&StorageKey::Proposal(proposal_id))
-            .expect("proposal not found")
+    }
+
+    pub fn get_proposal_counter(env: Env) -> u32 {
+        env.storage().instance().get(&StorageKey::ProposalCounter).unwrap_or(0)
     }
 
     pub fn get_admin(env: Env) -> Address {
@@ -451,11 +454,11 @@ mod tests {
         let pid = client.propose_transfer(&admin, &recipient, &100_000_i128, &2u32);
 
         client.approve_proposal(&approver_a, &pid);
-        let p1 = client.get_proposal(&pid);
+        let p1 = client.get_proposal(&pid).unwrap();
         assert!(!p1.executed);
 
         client.approve_proposal(&approver_b, &pid);
-        let p2 = client.get_proposal(&pid);
+        let p2 = client.get_proposal(&pid).unwrap();
         assert!(p2.executed);
     }
 

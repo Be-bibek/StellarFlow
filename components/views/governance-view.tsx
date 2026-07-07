@@ -60,14 +60,40 @@ interface AuditLog {
 // API helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
+import {
+  fetchAllOnChainProposals,
+  contractProposeTransfer,
+  contractApproveProposal,
+  connectFreighterWallet,
+} from '@/lib/stellar';
+
 // In local dev, Next.js rewrites /api/* -> http://127.0.0.1:8080/api/v1/*
 // In production, Vercel routes /api/* to the deployed Render backend URL.
 const API = '/api/gov';
 
 async function fetchPending(): Promise<GovernanceRequest[]> {
-  const r = await fetch(`${API}/approvals/pending`);
-  if (!r.ok) return [];
-  return r.json();
+  try {
+    const rawProposals = await fetchAllOnChainProposals();
+    return rawProposals.map(p => ({
+      id: String(p.id),
+      org_id: 'org_1',
+      transfer_id: `ONCHAIN-PROP-${p.id}`,
+      amount: String(Number(p.amount) / 10000000), // Stroops to XLM
+      asset_code: 'NATIVE',
+      destination: p.recipient,
+      purpose: 'Decentralized Multi-Sig Transfer',
+      required_approvals: p.required,
+      current_approvals: p.approvers ? p.approvers.length : 0,
+      status: p.executed ? 'SETTLED' : 'PENDING_APPROVAL',
+      requester_id: p.proposer,
+      expires_at: new Date(Date.now() + 86400000).toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }));
+  } catch (error) {
+    console.error("Failed to load on-chain proposals:", error);
+    return [];
+  }
 }
 
 async function fetchHistory(): Promise<HistoryItem[]> {
@@ -82,38 +108,6 @@ async function fetchAuditLogs(transferId?: string): Promise<AuditLog[]> {
     : `${API}/audit/logs?limit=200`;
   const r = await fetch(url);
   if (!r.ok) return [];
-  return r.json();
-}
-
-async function submitForApproval(body: {
-  amount: number;
-  asset_code?: string;
-  destination?: string;
-  purpose?: string;
-}): Promise<any> {
-  const r = await fetch(`${API}/approvals/request`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  return r.json();
-}
-
-async function approveRequest(id: string, comment?: string): Promise<any> {
-  const r = await fetch(`${API}/approvals/${id}/approve`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ actor_id: 'mock-user-123', comment }),
-  });
-  return r.json();
-}
-
-async function rejectRequest(id: string, comment?: string): Promise<any> {
-  const r = await fetch(`${API}/approvals/${id}/reject`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ actor_id: 'mock-user-123', comment }),
-  });
   return r.json();
 }
 
@@ -193,9 +187,17 @@ function ApprovalInbox({ onNavigateToAudit, onNavigate }: { onNavigateToAudit: (
 
   const handleApprove = async (req: GovernanceRequest) => {
     setActionStates(s => ({ ...s, [`${req.id}_approve`]: 'loading' }));
-    const res = await approveRequest(req.id, 'Approved via StellarFlow Governance UI');
+    try {
+      const wallet = await connectFreighterWallet();
+      const admin = process.env.NEXT_PUBLIC_DEPLOYER_PUBLIC_KEY || "GAICQ6KXUWZPJFWDWECQWNQTMDHHZKOEBI7PJ4FUJS6HG6K5FDFD5S6F";
+      await contractApproveProposal(wallet.address, admin, Number(req.id));
+      showToast('Approved! Waiting for ledger to settle...');
+      await new Promise(r => setTimeout(r, 4000));
+    } catch (e: any) {
+      console.error(e);
+      showToast('Approval failed: ' + e.message);
+    }
     setActionStates(s => ({ ...s, [`${req.id}_approve`]: 'done' }));
-    showToast(res.message ?? 'Approved!');
     await load();
     if (onNavigate) {
       setTimeout(() => onNavigate('transit'), 1500);
@@ -203,11 +205,8 @@ function ApprovalInbox({ onNavigateToAudit, onNavigate }: { onNavigateToAudit: (
   };
 
   const handleReject = async (req: GovernanceRequest) => {
-    setActionStates(s => ({ ...s, [`${req.id}_reject`]: 'loading' }));
-    const res = await rejectRequest(req.id, 'Rejected via StellarFlow Governance UI');
-    setActionStates(s => ({ ...s, [`${req.id}_reject`]: 'done' }));
-    showToast(res.message ?? 'Rejected');
-    await load();
+    // Smart contract doesn't have an explicit 'reject', usually it just expires
+    showToast('Rejection is not explicitly supported on-chain yet.');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -216,13 +215,33 @@ function ApprovalInbox({ onNavigateToAudit, onNavigate }: { onNavigateToAudit: (
     if (isNaN(amount) || amount <= 0) return;
     setSubmitting(true);
     setSubmitResult(null);
-    const res = await submitForApproval({
-      amount,
-      asset_code: 'native',
-      destination: 'GATWXA5AROAPLEYNWFN6COAI4AK7NIQZAWA2FQMOO56IMJAQZEEWGZNA',
-      purpose: newPurpose || undefined,
-    });
-    setSubmitResult(res);
+    try {
+      const wallet = await connectFreighterWallet();
+      const admin = process.env.NEXT_PUBLIC_DEPLOYER_PUBLIC_KEY || "GAICQ6KXUWZPJFWDWECQWNQTMDHHZKOEBI7PJ4FUJS6HG6K5FDFD5S6F";
+      const destination = 'GATWXA5AROAPLEYNWFN6COAI4AK7NIQZAWA2FQMOO56IMJAQZEEWGZNA';
+      const reqApprovals = amount < 1000 ? 0 : amount < 10000 ? 1 : 2;
+      
+      await contractProposeTransfer(
+        admin, 
+        destination, 
+        BigInt(Math.floor(amount * 10000000)), // XLM to stroops as BigInt
+        reqApprovals
+      );
+      
+      setSubmitResult({
+        status: reqApprovals === 0 ? 'SETTLED' : 'PENDING_APPROVAL',
+        transfer_id: 'ONCHAIN-TX',
+        message: 'Successfully submitted to Soroban Smart Contract',
+        auto_executed: reqApprovals === 0
+      });
+      showToast('Transfer submitted! Waiting for ledger...');
+      
+      // Wait for the Stellar ledger to close (~3-5 seconds) before reloading
+      await new Promise(r => setTimeout(r, 4000));
+    } catch (e: any) {
+      console.error(e);
+      showToast('Submit failed: ' + e.message);
+    }
     setSubmitting(false);
     setNewAmount('');
     setNewPurpose('');

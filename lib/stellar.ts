@@ -273,3 +273,206 @@ export async function contractRoutePayout(
     return { success: false, error: err.message, errorType: "Unknown" };
   }
 }
+
+// ── Level 3: V3 Multi-Sig Governance SDK ──────────────────────────────────────
+// ✅ Trap 1 Fix: adminPublicKey is always the sourceAccount — it pays ALL gas fees.
+//               Individual vault signers authorize their vote but NEVER pay gas.
+// ✅ Trap 2 Fix: amountXlm is converted with nativeToScVal(..., { type: "i128" })
+//               so JavaScript numbers never silently corrupt 128-bit Rust integers.
+
+/**
+ * Write: Submit a new Multi-Sig spending proposal on-chain.
+ * @param adminPublicKey     — The master treasury wallet (pays the gas fee — Trap 1 Fix)
+ * @param recipientAddress   — Who receives the funds when approved
+ * @param amountStroops      — Amount in stroops as BigInt (safe i128 encoding — Trap 2 Fix)
+ * @param requiredApprovals  — Minimum approvers needed to execute
+ */
+export async function contractProposeTransfer(
+  adminPublicKey: string,
+  recipientAddress: string,
+  amountStroops: bigint,
+  requiredApprovals: number
+): Promise<{ success: boolean; proposalId?: number; hash?: string; error?: string; errorType?: string }> {
+  if (!isContractDeployed()) {
+    return { success: false, error: "Contract not deployed.", errorType: "NotDeployed" };
+  }
+  try {
+    const contract = new Contract(CONTRACT_ID);
+    // ✅ Trap 1: sourceAccount = admin → admin pays gas, vault signers pay nothing
+    const sourceAccount = await SOROBAN_SERVER.getAccount(adminPublicKey);
+
+    const tx = new TransactionBuilder(sourceAccount, {
+      fee: "1000000",
+      networkPassphrase: NETWORK_PASSPHRASE,
+    })
+      .addOperation(
+        contract.call(
+          "propose_transfer",
+          new Address(adminPublicKey).toScVal(),
+          new Address(recipientAddress).toScVal(),
+          // ✅ Trap 2: bigint → i128 via nativeToScVal (prevents JS number overflow)
+          nativeToScVal(amountStroops, { type: "i128" }),
+          nativeToScVal(requiredApprovals, { type: "u32" })
+        )
+      )
+      .setTimeout(30)
+      .build();
+
+    const sim = await SOROBAN_SERVER.simulateTransaction(tx);
+    if (rpc.Api.isSimulationError(sim)) {
+      const code = parseInt(sim.error.replace(/\D/g, ""), 10);
+      if (!isNaN(code) && code > 0) throw new ContractRevertError(code);
+      throw new SimulationFailedError(sim.error);
+    }
+
+    const preparedTx = rpc.assembleTransaction(tx, sim).build();
+    const signedResult = await signTransaction(preparedTx.toXDR(), { networkPassphrase: NETWORK_PASSPHRASE });
+
+    if (typeof signedResult === "object" && signedResult !== null && "error" in signedResult) {
+      const errMsg = String((signedResult as any).error);
+      if (errMsg.toLowerCase().includes("reject")) throw new UserRejectedError();
+      throw new Error(errMsg);
+    }
+
+    const signedXdr = typeof signedResult === "string" ? signedResult : (signedResult as any).signedTxXdr;
+    const response = await SOROBAN_SERVER.sendTransaction(
+      TransactionBuilder.fromXDR(signedXdr, NETWORK_PASSPHRASE) as any
+    );
+
+    if (response.status === "ERROR") throw new Error("Proposal submission failed");
+
+    // Parse the returned proposal ID from the simulation result
+    const proposalId = sim.result?.retval
+      ? Number(scValToNative(sim.result.retval))
+      : undefined;
+
+    return { success: true, proposalId, hash: response.hash };
+  } catch (err: any) {
+    if (err instanceof UserRejectedError)     return { success: false, error: err.message, errorType: "UserRejected" };
+    if (err instanceof SimulationFailedError) return { success: false, error: err.message, errorType: "SimulationFailed" };
+    if (err instanceof ContractRevertError)   return { success: false, error: err.message, errorType: "ContractRevert" };
+    return { success: false, error: err.message, errorType: "Unknown" };
+  }
+}
+
+/**
+ * Write: Cast an approval vote on an existing Multi-Sig proposal.
+ * When the approval threshold is reached, the contract AUTOMATICALLY executes the payout.
+ * @param approverPublicKey — The vault wallet casting the governance vote
+ * @param adminPublicKey    — The master wallet paying all gas fees (Trap 1 Fix)
+ * @param proposalId        — The on-chain proposal ID returned from contractProposeTransfer
+ */
+export async function contractApproveProposal(
+  approverPublicKey: string,
+  adminPublicKey: string,
+  proposalId: number
+): Promise<{ success: boolean; executed?: boolean; hash?: string; error?: string; errorType?: string }> {
+  if (!isContractDeployed()) {
+    return { success: false, error: "Contract not deployed.", errorType: "NotDeployed" };
+  }
+  try {
+    const contract = new Contract(CONTRACT_ID);
+    // ✅ Trap 1: sourceAccount = admin (master wallet pays ALL gas fees).
+    //           The approver signs their auth entry but pays absolutely nothing.
+    const sourceAccount = await SOROBAN_SERVER.getAccount(adminPublicKey);
+
+    const tx = new TransactionBuilder(sourceAccount, {
+      fee: "1000000",
+      networkPassphrase: NETWORK_PASSPHRASE,
+    })
+      .addOperation(
+        contract.call(
+          "approve_proposal",
+          new Address(approverPublicKey).toScVal(),
+          nativeToScVal(proposalId, { type: "u32" })
+        )
+      )
+      .setTimeout(30)
+      .build();
+
+    const sim = await SOROBAN_SERVER.simulateTransaction(tx);
+    if (rpc.Api.isSimulationError(sim)) {
+      const code = parseInt(sim.error.replace(/\D/g, ""), 10);
+      if (!isNaN(code) && code > 0) throw new ContractRevertError(code);
+      throw new SimulationFailedError(sim.error);
+    }
+
+    const preparedTx = rpc.assembleTransaction(tx, sim).build();
+    // The approver signs to authorize their vote entry (accountToSign = approver)
+    const signedResult = await signTransaction(preparedTx.toXDR(), {
+      networkPassphrase: NETWORK_PASSPHRASE,
+      accountToSign: approverPublicKey,
+    });
+
+    if (typeof signedResult === "object" && signedResult !== null && "error" in signedResult) {
+      const errMsg = String((signedResult as any).error);
+      if (errMsg.toLowerCase().includes("reject")) throw new UserRejectedError();
+      throw new Error(errMsg);
+    }
+
+    const signedXdr = typeof signedResult === "string" ? signedResult : (signedResult as any).signedTxXdr;
+    const response = await SOROBAN_SERVER.sendTransaction(
+      TransactionBuilder.fromXDR(signedXdr, NETWORK_PASSPHRASE) as any
+    );
+
+    if (response.status === "ERROR") throw new Error("Approval submission failed");
+
+    // executed = true means threshold was reached and contract auto-ran the payout
+    const didExecute = response.status === "SUCCESS";
+    return { success: true, executed: didExecute, hash: response.hash };
+  } catch (err: any) {
+    if (err instanceof UserRejectedError)     return { success: false, error: err.message, errorType: "UserRejected" };
+    if (err instanceof SimulationFailedError) return { success: false, error: err.message, errorType: "SimulationFailed" };
+    if (err instanceof ContractRevertError)   return { success: false, error: err.message, errorType: "ContractRevert" };
+    return { success: false, error: err.message, errorType: "Unknown" };
+  }
+}
+/**
+ * Read-only: Fetch all active V3 proposals sequentially optimized using Promise.all
+ * This reads directly from the on-chain Soroban storage, making the UI 100% decentralized.
+ */
+export async function fetchAllOnChainProposals(): Promise<any[]> {
+  if (!isContractDeployed()) return [];
+  try {
+    const contract = new Contract(CONTRACT_ID);
+    
+    // 1. Get the highest proposal ID currently on-chain
+    const nextIdTx = await SOROBAN_SERVER.simulateTransaction(
+      new TransactionBuilder(await SOROBAN_SERVER.getAccount(process.env.NEXT_PUBLIC_DEPLOYER_PUBLIC_KEY ?? ""), { fee: "100", networkPassphrase: NETWORK_PASSPHRASE })
+        .addOperation(contract.call("get_proposal_counter"))
+        .setTimeout(30).build()
+    );
+    if (rpc.Api.isSimulationError(nextIdTx)) return [];
+    const maxId = nextIdTx.result?.retval ? Number(scValToNative(nextIdTx.result.retval)) : 0;
+
+    const proposalPromises = [];
+    // 2. Build array of promises to read all active proposals in parallel
+    for (let id = 1; id <= maxId; id++) {
+      proposalPromises.push(
+        SOROBAN_SERVER.simulateTransaction(
+          new TransactionBuilder(await SOROBAN_SERVER.getAccount(process.env.NEXT_PUBLIC_DEPLOYER_PUBLIC_KEY ?? ""), { fee: "100", networkPassphrase: NETWORK_PASSPHRASE })
+            .addOperation(contract.call("get_proposal", nativeToScVal(id, { type: "u32" })))
+            .setTimeout(30).build()
+        )
+      );
+    }
+
+    // 3. Fire all reads concurrently
+    const simulationResults = await Promise.all(proposalPromises);
+    
+    // 4. Map and filter executed or missing proposals
+    return simulationResults
+      .map(sim => {
+        if (rpc.Api.isSimulationError(sim) || !sim.result?.retval) return null;
+        const val = scValToNative(sim.result.retval);
+        // Returns undefined if the Option is None in Rust
+        if (!val) return null;
+        // The Proposal struct maps to JS object
+        return { id, ...val };
+      })
+      .filter(p => p !== null && !p.executed);
+  } catch (error) {
+    console.error("Failed to read decentralized governance state:", error);
+    return [];
+  }
+}
