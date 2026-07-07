@@ -84,7 +84,7 @@ function TxRowCard({ tx, index }: { tx: StellarTransaction; index: number }) {
     ? `${Math.floor(elapsedSec / 60)}m ago`
     : `${Math.floor(elapsedSec / 3600)}h ago`;
 
-  const breakdownEntries = Object.entries(tx.sourceBreakdown);
+  const breakdownEntries = Object.entries(tx.sourceBreakdown || {});
 
   return (
     <BentoCard
