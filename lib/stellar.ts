@@ -288,7 +288,7 @@ export async function contractRoutePayout(
  * @param requiredApprovals  — Minimum approvers needed to execute
  */
 export async function contractProposeTransfer(
-  adminPublicKey: string,
+  proposerPublicKey: string,
   recipientAddress: string,
   amountStroops: bigint,
   requiredApprovals: number
@@ -298,8 +298,8 @@ export async function contractProposeTransfer(
   }
   try {
     const contract = new Contract(CONTRACT_ID);
-    // ✅ Trap 1: sourceAccount = admin → admin pays gas, vault signers pay nothing
-    const sourceAccount = await SOROBAN_SERVER.getAccount(adminPublicKey);
+    // User pays gas to propose
+    const sourceAccount = await SOROBAN_SERVER.getAccount(proposerPublicKey);
 
     const tx = new TransactionBuilder(sourceAccount, {
       fee: "1000000",
@@ -308,7 +308,7 @@ export async function contractProposeTransfer(
       .addOperation(
         contract.call(
           "propose_transfer",
-          new Address(adminPublicKey).toScVal(),
+          new Address(proposerPublicKey).toScVal(),
           new Address(recipientAddress).toScVal(),
           // ✅ Trap 2: bigint → i128 via nativeToScVal (prevents JS number overflow)
           nativeToScVal(amountStroops, { type: "i128" }),

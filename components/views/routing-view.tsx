@@ -74,7 +74,9 @@ export function RoutingView({ onNavigate }: { onNavigate?: (view: any) => void }
 
   const { jitSimulation, jitIsRunning, simulateJitSplit, clearSimulation } = useTreasuryStore();
   const totalBalance = useTreasuryStore(selectTotalBalance);
-  const { executeJit, pipelineIsRunning } = useTransactionStore();
+  const { executeJit } = useTransactionStore();
+
+  const [isExecuting, setIsExecuting] = useState(false);
 
   const handleSimulate = useCallback(async () => {
     const amount = parseFloat(targetInput.replace(/,/g, ''));
@@ -86,9 +88,10 @@ export function RoutingView({ onNavigate }: { onNavigate?: (view: any) => void }
   const isValidDestination = destination.trim().startsWith('G') && destination.trim().length === 56;
 
   const handleExecute = useCallback(async () => {
-    if (!jitSimulation || pipelineIsRunning) return;
+    if (!jitSimulation || isExecuting) return;
     if (!isValidDestination) return;
 
+    setIsExecuting(true);
     try {
       // 1. Connect Freighter
       const wallet = await connectFreighterWallet();
@@ -96,19 +99,20 @@ export function RoutingView({ onNavigate }: { onNavigate?: (view: any) => void }
       // 2. The amount requested in the simulation
       const amount = jitSimulation.target;
       
-      // 3. Determine required approvals based on policy (like Governance view used to do)
+      // 3. Determine required approvals based on policy
       const reqApprovals = amount < 1000 ? 0 : amount < 10000 ? 1 : 2;
-      
-      // 4. Admin public key 
-      const admin = process.env.NEXT_PUBLIC_DEPLOYER_PUBLIC_KEY || "GAICQ6KXUWZPJFWDWECQWNQTMDHHZKOEBI7PJ4FUJS6HG6K5FDFD5S6F";
 
-      // 5. Submit on-chain proposal
-      await contractProposeTransfer(
-        admin,
+      // 4. Submit on-chain proposal using the user's wallet
+      const response = await contractProposeTransfer(
+        wallet,
         destination.trim(),
         BigInt(Math.floor(amount * 10000000)), // Convert XLM to stroops
         reqApprovals
       );
+
+      if (!response.success) {
+        throw new Error(response.error);
+      }
 
       // Wait for ledger
       await new Promise(r => setTimeout(r, 4000));
@@ -124,8 +128,10 @@ export function RoutingView({ onNavigate }: { onNavigate?: (view: any) => void }
     } catch (e: any) {
       console.error("Proposal failed:", e);
       alert("Failed to submit proposal: " + e.message);
+    } finally {
+      setIsExecuting(false);
     }
-  }, [jitSimulation, pipelineIsRunning, destination, onNavigate]);
+  }, [jitSimulation, isExecuting, destination, onNavigate]);
 
   const parsedAmount = parseFloat(targetInput.replace(/,/g, '')) || 0;
   const isOverLimit = parsedAmount > totalBalance;
@@ -256,10 +262,10 @@ export function RoutingView({ onNavigate }: { onNavigate?: (view: any) => void }
                 whileHover={{ scale: 1.02, y: -1 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={handleExecute}
-                disabled={!jitSimulation?.isFullyCovered || pipelineIsRunning || !isValidDestination}
+                disabled={!jitSimulation?.isFullyCovered || isExecuting || !isValidDestination}
                 className="py-2.5 bg-white dark:bg-[#08060D] hover:bg-slate-50 dark:hover:bg-[#0f0b1a] border border-blue-200 dark:border-indigo-500/30 text-blue-600 dark:text-indigo-400 rounded-xl text-sm font-medium transition flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {pipelineIsRunning ? (
+                {isExecuting ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <><Send className="w-4 h-4" /> Execute Route</>
