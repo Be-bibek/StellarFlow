@@ -11,7 +11,7 @@ import {
 } from '@/lib/stores/transaction-store';
 import { BentoCard } from '@/components/ui/bento-card';
 import { Button } from '@/components/ui/button';
-import { connectFreighterWallet, contractRoutePayout, checkFreighter } from '@/lib/stellar';
+import { connectFreighterWallet, contractRoutePayout } from '@/lib/stellar';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -345,9 +345,8 @@ function SessionCard({
                         try {
                           const wallet = await connectFreighterWallet();
                           const adminPubKey = process.env.NEXT_PUBLIC_DEPLOYER_PUBLIC_KEY || "GAICQ6KXUWZPJFWDWECQWNQTMDHHZKOEBI7PJ4FUJS6HG6K5FDFD5S6F";
-                          const currentAccount = await checkFreighter();
                           
-                          if (currentAccount.publicKey !== adminPubKey) {
+                          if (wallet !== adminPubKey) {
                             alert("Unauthorized: Only the Master Admin can execute the final payout routing.");
                             setIsExecuting(false);
                             return;
