@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { connectFreighterWallet, fetchXlmBalance } from "../lib/stellar";
-import { motion } from "motion/react";
+import { motion } from "framer-motion";
 import { ThemeToggle } from "./theme-toggle";
 import { 
   LayoutDashboard, 
@@ -54,12 +54,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
     { href: "/settings", label: "Settings", badge: undefined, icon: Settings },
   ];
 
+  const mobileNavItems = navItems.slice(0, 5);
+
   const currentRouteName = navItems.find((item) => item.href === pathname)?.label || "Workspace";
 
   return (
     <div className="flex h-full w-full bg-background text-text-primary font-sans overflow-hidden">
-      {/* Sidebar */}
-      <aside className="w-[280px] bg-surface/80 backdrop-blur-3xl border-r border-border flex flex-col flex-shrink-0 z-30 shadow-sm relative">
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:flex w-[280px] bg-surface/80 backdrop-blur-3xl border-r border-border flex-col flex-shrink-0 z-30 shadow-sm relative">
         <div className="p-8 flex items-center gap-4 border-b border-border">
           <div className="w-8 h-8 rounded bg-gradient-to-br from-accent to-blue-400 flex items-center justify-center font-bold text-white shadow-lg">
             S
@@ -111,16 +113,19 @@ export function Shell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col h-full min-w-0 relative">
+      <main className="flex-1 flex flex-col h-full min-w-0 relative pb-16 md:pb-0">
         {/* Header */}
-        <header className="h-[80px] border-b border-border px-10 flex items-center justify-between sticky top-0 bg-background/80 backdrop-blur-3xl z-20">
-          <div className="flex items-center gap-3 text-sm">
-            <span className="text-text-secondary">Workspace</span>
-            <ChevronDown className="w-3 h-3 text-white/20 -rotate-90" />
+        <header className="h-[70px] md:h-[80px] border-b border-border px-4 md:px-10 flex items-center justify-between sticky top-0 bg-background/80 backdrop-blur-3xl z-20">
+          <div className="flex items-center gap-2 md:gap-3 text-xs md:text-sm">
+            <div className="md:hidden w-8 h-8 rounded bg-gradient-to-br from-accent to-blue-400 flex items-center justify-center font-bold text-white shadow-lg mr-2">
+              S
+            </div>
+            <span className="hidden sm:inline text-text-secondary">Workspace</span>
+            <ChevronDown className="hidden sm:inline w-3 h-3 text-white/20 -rotate-90" />
             <span className="font-medium text-text-primary">{currentRouteName}</span>
           </div>
 
-          <div className="flex-1 max-w-md mx-8">
+          <div className="hidden md:block flex-1 max-w-md mx-8">
             <div className="relative group">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary group-focus-within:text-accent transition-colors" />
               <input 
@@ -131,13 +136,13 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
 
-          <div className="flex items-center gap-4 relative">
+          <div className="flex items-center gap-2 md:gap-4 relative">
             <div 
               className="relative p-2 bg-card rounded-full border border-border cursor-pointer hover:border-text-secondary transition-colors"
               onClick={() => setIsNotificationOpen(!isNotificationOpen)}
             >
-              <Bell className="w-5 h-5 text-text-secondary" />
-              <div className="absolute top-2 right-2 w-2 h-2 bg-danger rounded-full ring-2 ring-background animate-pulse"></div>
+              <Bell className="w-4 h-4 md:w-5 md:h-5 text-text-secondary" />
+              <div className="absolute top-1.5 right-1.5 w-2 h-2 bg-danger rounded-full ring-2 ring-background animate-pulse"></div>
             </div>
             
             {/* Notification Dropdown */}
@@ -146,14 +151,13 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                className="absolute top-12 right-[120px] w-80 bg-surface/80 backdrop-blur-xl border border-border rounded-2xl shadow-2xl z-50 overflow-hidden"
+                className="absolute top-12 right-0 md:right-[120px] w-72 md:w-80 bg-surface/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl z-50 overflow-hidden"
               >
                 <div className="p-4 border-b border-border flex items-center justify-between">
                   <h4 className="text-xs font-bold uppercase tracking-widest text-text-primary">Notifications</h4>
                   <span className="text-[10px] text-text-secondary hover:text-text-primary cursor-pointer">Mark all as read</span>
                 </div>
                 <div className="divide-y divide-border">
-                  {/* Mock Notification 1 */}
                   <div className="p-4 hover:bg-white/5 transition-colors cursor-pointer flex gap-3">
                     <div className="w-8 h-8 rounded-full bg-danger/10 border border-danger/20 flex flex-shrink-0 items-center justify-center text-danger mt-1">
                       <ShieldCheck className="w-4 h-4" />
@@ -164,54 +168,33 @@ export function Shell({ children }: { children: React.ReactNode }) {
                       <p className="text-[10px] text-danger font-bold mt-2 uppercase tracking-widest">2 mins ago</p>
                     </div>
                   </div>
-                  {/* Mock Notification 2 */}
-                  <div className="p-4 hover:bg-white/5 transition-colors cursor-pointer flex gap-3">
-                    <div className="w-8 h-8 rounded-full bg-success/10 border border-success/20 flex flex-shrink-0 items-center justify-center text-success mt-1">
-                      <Activity className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-text-primary">Transaction Approved</p>
-                      <p className="text-[10px] text-text-secondary mt-1">Multi-sig requirement met for Vendor Settlement Q3. Execution started.</p>
-                      <p className="text-[10px] text-text-secondary font-bold mt-2 uppercase tracking-widest">15 mins ago</p>
-                    </div>
-                  </div>
-                  {/* Mock Notification 3 */}
-                  <div className="p-4 hover:bg-white/5 transition-colors cursor-pointer flex gap-3">
-                    <div className="w-8 h-8 rounded-full bg-accent/10 border border-accent/20 flex flex-shrink-0 items-center justify-center text-accent mt-1">
-                      <Route className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-text-primary">New Transfer Request</p>
-                      <p className="text-[10px] text-text-secondary mt-1">Operation Hub is requesting 50,000 USDC from the Master Liquidity Pool.</p>
-                      <p className="text-[10px] text-text-secondary font-bold mt-2 uppercase tracking-widest">1 hour ago</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="p-3 bg-card border-t border-border mt-auto w-full text-center hover:bg-white/5 cursor-pointer transition-colors block">
-                   <p className="text-[10px] text-text-primary uppercase tracking-widest font-bold">View full log</p>
                 </div>
               </motion.div>
             )}
 
-            <div className="h-8 w-[1px] bg-border"></div>
+            <div className="hidden md:block h-8 w-[1px] bg-border"></div>
             {walletAddress ? (
-              <div className="flex items-center gap-3 bg-white/5 px-4 py-2.5 rounded-lg border border-border">
-                <span className="text-xs font-bold text-accent">{balance} XLM</span>
+              <div className="flex items-center gap-2 md:gap-3 bg-white/5 px-3 py-1.5 md:px-4 md:py-2.5 rounded-lg border border-border">
+                <span className="text-[10px] md:text-xs font-bold text-accent">{balance} XLM</span>
                 <div className="h-4 w-[1px] bg-border"></div>
-                <span className="text-xs text-text-secondary">{walletAddress.slice(0, 4)}...{walletAddress.slice(-4)}</span>
-                <button onClick={handleDisconnect} className="text-[10px] text-danger ml-2 hover:underline">Disconnect</button>
+                <span className="text-[10px] md:text-xs text-text-secondary">{walletAddress.slice(0, 4)}...{walletAddress.slice(-4)}</span>
+                <button onClick={handleDisconnect} className="hidden sm:inline text-[10px] text-danger ml-2 hover:underline">Disconnect</button>
               </div>
             ) : (
               <button 
                 onClick={handleConnect}
-                className="bg-accent hover:bg-blue-400 text-white text-xs font-bold px-5 py-2.5 rounded-lg shadow-lg shadow-accent/20 transition-all"
+                className="bg-accent hover:bg-blue-400 text-white text-[10px] md:text-xs font-bold px-3 py-1.5 md:px-5 md:py-2.5 rounded-lg shadow-lg shadow-accent/20 transition-all"
               >
                 Connect Wallet
               </button>
             )}
-            <button className="bg-white/10 hover:bg-white/20 text-white text-xs font-bold px-5 py-2.5 rounded-lg border border-border transition-all">
+            <button className="hidden sm:block bg-white/10 hover:bg-white/20 text-white text-[10px] md:text-xs font-bold px-3 py-1.5 md:px-5 md:py-2.5 rounded-lg border border-border transition-all">
               New Transfer
             </button>
+            
+            <div className="md:hidden ml-1">
+                <ThemeToggle />
+            </div>
           </div>
         </header>
 
@@ -222,11 +205,26 @@ export function Shell({ children }: { children: React.ReactNode }) {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
-            className="w-full h-full p-10 lg:p-12 max-w-[1600px] mx-auto"
+            className="w-full h-full p-4 sm:p-6 md:p-10 lg:p-12 max-w-[1600px] mx-auto"
           >
             {children}
           </motion.div>
         </div>
+        
+        {/* Mobile Bottom Navigation */}
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-surface/90 backdrop-blur-xl border-t border-border flex items-center justify-around z-50 h-16 px-2 pb-safe">
+            {mobileNavItems.map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <Link key={item.href} href={item.href} className="flex-1 flex justify-center">
+                  <div className={`flex flex-col items-center justify-center w-full h-full gap-1 ${isActive ? "text-accent" : "text-text-secondary"}`}>
+                    <item.icon className={`w-5 h-5 ${isActive ? "text-accent" : ""}`} />
+                    <span className="text-[9px] font-medium">{item.label}</span>
+                  </div>
+                </Link>
+              );
+            })}
+        </nav>
       </main>
     </div>
   );

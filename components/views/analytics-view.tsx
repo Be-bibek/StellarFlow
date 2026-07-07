@@ -1,30 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { BentoCard } from '@/components/ui/bento-card';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import { useTheme } from 'next-themes';
-
-const RUN_RATE_DATA = [
-  { name: 'Mon', spend: 4000, alloc: 2400 },
-  { name: 'Tue', spend: 3000, alloc: 1398 },
-  { name: 'Wed', spend: 2000, alloc: 9800 },
-  { name: 'Thu', spend: 2780, alloc: 3908 },
-  { name: 'Fri', spend: 1890, alloc: 4800 },
-  { name: 'Sat', spend: 2390, alloc: 3800 },
-  { name: 'Sun', spend: 3490, alloc: 4300 },
-];
-
-const PIE_DATA = [
-  { name: 'USDC', value: 65, color: '#06b6d4' },
-  { name: 'XLM', value: 20, color: '#3b82f6' }, // updated to blue instead of indigo
-  { name: 'BTC', value: 10, color: '#f59e0b' },
-  { name: 'SOL', value: 5, color: '#10b981' },
-];
+import { useTransactionStore } from '@/lib/stores/transaction-store';
 
 export function AnalyticsView() {
   const [timeframe, setTimeframe] = useState('Week');
   const { resolvedTheme } = useTheme();
+  const { transactions } = useTransactionStore();
   
   const isDark = resolvedTheme === 'dark';
   
@@ -34,6 +19,53 @@ export function AnalyticsView() {
   const tooltipBorder = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
   const tooltipColor = isDark ? '#fff' : '#0f172a';
   const spendColor = isDark ? '#6366f1' : '#2563eb'; // indigo/blue
+
+  const runRateData = useMemo(() => {
+    // Generate empty buckets
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const buckets = days.reduce((acc, day) => {
+      acc[day] = { name: day, spend: 0, alloc: 0 };
+      return acc;
+    }, {} as Record<string, any>);
+
+    transactions.forEach(tx => {
+      const date = new Date(tx.date);
+      // Map JS day to our days array
+      const dayIndex = date.getDay() === 0 ? 6 : date.getDay() - 1;
+      const dayName = days[dayIndex];
+      
+      const val = parseFloat(tx.amount.replace(/,/g, ''));
+      if (!isNaN(val)) {
+        if (tx.type === 'Outgoing') {
+           buckets[dayName].spend += val;
+        } else {
+           buckets[dayName].alloc += val;
+        }
+      }
+    });
+
+    return Object.values(buckets);
+  }, [transactions]);
+
+  const pieData = useMemo(() => {
+    const assets: Record<string, number> = {};
+    let total = 0;
+    
+    transactions.forEach(tx => {
+      const val = parseFloat(tx.amount.replace(/,/g, ''));
+      if (!isNaN(val)) {
+        assets[tx.asset] = (assets[tx.asset] || 0) + val;
+        total += val;
+      }
+    });
+
+    const colors = ['#06b6d4', '#3b82f6', '#f59e0b', '#10b981'];
+    return Object.entries(assets).map(([name, val], i) => ({
+      name,
+      value: total > 0 ? Math.round((val / total) * 100) : 0,
+      color: colors[i % colors.length]
+    }));
+  }, [transactions]);
 
   return (
     <div className="flex flex-col h-full gap-6 max-w-7xl mx-auto w-full">
@@ -62,7 +94,7 @@ export function AnalyticsView() {
             
             <div className="flex-1 w-full h-full">
                <ResponsiveContainer width="100%" height="100%">
-                 <AreaChart data={RUN_RATE_DATA} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                 <AreaChart data={runRateData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                    <defs>
                      <linearGradient id="colorSpend" x1="0" y1="0" x2="0" y2="1">
                        <stop offset="5%" stopColor={spendColor} stopOpacity={0.3}/>
@@ -94,7 +126,7 @@ export function AnalyticsView() {
                  <ResponsiveContainer width="100%" height="100%">
                    <PieChart>
                      <Pie
-                       data={PIE_DATA}
+                       data={pieData}
                        cx="50%"
                        cy="50%"
                        innerRadius={60}
@@ -103,13 +135,13 @@ export function AnalyticsView() {
                        dataKey="value"
                        stroke="rgba(0,0,0,0)"
                      >
-                       {PIE_DATA.map((entry, index) => (
+                       {pieData.map((entry, index) => (
                          <Cell key={`cell-${index}`} fill={entry.color} />
                        ))}
                      </Pie>
                      <Tooltip 
                        contentStyle={{ backgroundColor: tooltipBg, borderColor: tooltipBorder, borderRadius: '8px', color: tooltipColor }}
-                       formatter={(val) => `${val}%`}
+                       formatter={(val: number) => `${val}%`}
                      />
                    </PieChart>
                  </ResponsiveContainer>
@@ -127,7 +159,7 @@ export function AnalyticsView() {
                <h3 className="font-medium mb-4 text-sm text-slate-900 dark:text-white">Action Frequency</h3>
                <div className="flex-1 w-full h-[100px]">
                  <ResponsiveContainer width="100%" height="100%">
-                   <BarChart data={RUN_RATE_DATA}>
+                   <BarChart data={runRateData}>
                      <Tooltip cursor={{ fill: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }} contentStyle={{ backgroundColor: tooltipBg, borderColor: tooltipBorder, color: tooltipColor }} />
                      <Bar dataKey="spend" fill={spendColor} radius={[4, 4, 0, 0]} />
                    </BarChart>

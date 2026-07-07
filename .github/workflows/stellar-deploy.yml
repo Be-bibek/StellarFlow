@@ -1,45 +1,48 @@
-name: StellarFlow CI/CD Pipeline
+name: Deploy Smart Contract
 
 on:
   push:
-    branches:
-      - main
-  pull_request:
+    paths:
+      - 'backend/contracts/**'
     branches:
       - main
 
 jobs:
-  build-and-test-contract:
-    name: Build & Test Soroban Contract
+  deploy-contract:
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v3
 
-      - name: Install Rust toolchain
+      - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
-          
-      - name: Cache dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: |
-            backend
-            backend/contracts
-            
-      - name: Run Contract Tests
-        working-directory: ./backend/contracts
-        run: cargo test
-        
+
       - name: Build Contract WASM
         working-directory: ./backend/contracts
         run: cargo build --target wasm32-unknown-unknown --release
-        
-      - name: Upload WASM Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: treasury_router.wasm
-          path: ./backend/contracts/target/wasm32-unknown-unknown/release/treasury_router.wasm
-          retention-days: 5
+
+      - name: Install Stellar CLI
+        run: cargo install --locked stellar-cli --features opt
+
+      - name: Deploy to Stellar Testnet
+        id: deploy
+        working-directory: ./backend/contracts
+        run: |
+          stellar network add --global testnet --rpc-url https://soroban-testnet.stellar.org:443 --network-passphrase "Test SDF Network ; September 2015"
+          stellar keys generate --global deployer --network testnet
+          stellar keys fund --global deployer --network testnet
+          
+          # Deploy and capture the contract ID
+          CONTRACT_ID=$(stellar contract deploy --wasm target/wasm32-unknown-unknown/release/stellarflow_contracts.wasm --source deployer --network testnet)
+          echo "Deployed Contract ID: $CONTRACT_ID"
+          echo "contract_id=$CONTRACT_ID" >> $GITHUB_OUTPUT
+
+      - name: Update Railway Environment Variable
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+          CONTRACT_ID: ${{ steps.deploy.outputs.contract_id }}
+        run: |
+          npm i -g @railway/cli
+          railway variables set NEXT_PUBLIC_TREASURY_CONTRACT_ID=$CONTRACT_ID --project $RAILWAY_PROJECT_ID -e production

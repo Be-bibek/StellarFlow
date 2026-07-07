@@ -31,10 +31,11 @@ export class ContractRevertError extends Error {
   constructor(code: number) { super(`Contract reverted with error code ${code}.`); this.name = "ContractRevertError"; }
 }
 
+import { openWalletModal } from "./stellar-kit";
+
 // ── Level 1: Wallet Connection ────────────────────────────────────────────────
 export async function connectFreighterWallet(): Promise<string> {
-  const result = await requestAccess();
-  if (result.error) throw new Error(result.error);
+  const result = await openWalletModal();
   return result.address;
 }
 

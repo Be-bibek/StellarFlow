@@ -1,17 +1,84 @@
 'use client';
 
-import React from 'react';
-import { motion } from 'motion/react';
+import React, { useState, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { BentoCard } from '@/components/ui/bento-card';
 import { UploadCloud, Plus, Trash2, ShieldCheck, Cpu } from 'lucide-react';
 
-const RECIPIENTS = [
-  { id: '1', recipientId: 'EMP-014', destKey: '0x94A...B22F', vol: '12,500 USDC' },
-  { id: '2', recipientId: 'VEN-882', destKey: 'GCD...44K9', vol: '104,200 XLM' },
-  { id: '3', recipientId: 'EMP-112', destKey: '0x81C...90FA', vol: '8,400 USDC' },
-];
+interface Recipient {
+  id: string;
+  recipientId: string;
+  destKey: string;
+  vol: string;
+  assetCode: string;
+}
 
 export function BatchView() {
+  const [recipients, setRecipients] = useState<Recipient[]>([]);
+  const [loading, setLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      if (!text) return;
+
+      const lines = text.split('\n').filter(line => line.trim().length > 0);
+      const parsed = lines.map((line, index) => {
+        // Assume format: RecipientId,DestinationKey,Amount,AssetCode
+        const [recipientId, destKey, vol, assetCode] = line.split(',');
+        return {
+          id: `${index}-${Date.now()}`,
+          recipientId: recipientId?.trim() || `Row-${index+1}`,
+          destKey: destKey?.trim() || '',
+          vol: vol?.trim() || '0',
+          assetCode: assetCode?.trim() || 'USDC',
+        };
+      });
+
+      setRecipients([...recipients, ...parsed]);
+    };
+    reader.readAsText(file);
+    if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+    }
+  };
+
+  const executeBatch = async () => {
+    if (recipients.length === 0) return;
+    setLoading(true);
+    try {
+      const response = await fetch('/api/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipients })
+      });
+      if (response.ok) {
+        alert('Batch broadcast successful');
+        setRecipients([]);
+      } else {
+        alert('Error broadcasting batch');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error broadcasting batch');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const removeRecipient = (id: string) => {
+    setRecipients(recipients.filter(r => r.id !== id));
+  };
+
+  const totalVolume = recipients.reduce((acc, r) => acc + (parseFloat(r.vol) || 0), 0);
+  const hasXlm = recipients.some(r => r.assetCode === 'XLM');
+  const hasUsdc = recipients.some(r => r.assetCode === 'USDC');
+
   return (
     <div className="flex flex-col h-full gap-6 max-w-7xl mx-auto w-full">
       <div className="mb-2">
@@ -28,16 +95,23 @@ export function BatchView() {
                 <UploadCloud className="w-8 h-8 text-blue-600 dark:text-indigo-400" />
               </div>
               <h3 className="text-lg font-medium text-slate-900 dark:text-white">Drag & Drop Batch Matrix</h3>
-              <p className="text-sm text-slate-500 dark:text-white/50 mt-2 max-w-sm">Drop your .CSV or .JSON payroll manifest here to parse transactions automatically.</p>
+              <p className="text-sm text-slate-500 dark:text-white/50 mt-2 max-w-sm">Upload your .CSV payroll manifest here to parse transactions automatically. (Format: ID, Address, Amount, Asset)</p>
               
-              <div className="flex items-center gap-4 mt-8 w-full max-w-sm">
-                <div className="h-px bg-slate-200 dark:bg-white/10 flex-1" />
-                <span className="text-xs text-slate-400 dark:text-white/30 font-mono uppercase">or</span>
-                <div className="h-px bg-slate-200 dark:bg-white/10 flex-1" />
-              </div>
+              <input 
+                type="file" 
+                accept=".csv" 
+                className="hidden" 
+                ref={fileInputRef} 
+                onChange={handleFileUpload} 
+              />
 
-              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="mt-8 flex items-center gap-2 py-2 px-6 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg text-sm font-medium transition cursor-pointer text-slate-700 dark:text-white">
-                <Plus className="w-4 h-4" /> Add Individual Recipient Line
+              <motion.button 
+                whileHover={{ scale: 1.02 }} 
+                whileTap={{ scale: 0.98 }} 
+                onClick={() => fileInputRef.current?.click()}
+                className="mt-8 flex items-center gap-2 py-2 px-6 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg text-sm font-medium transition cursor-pointer text-slate-700 dark:text-white"
+              >
+                <Plus className="w-4 h-4" /> Upload CSV
               </motion.button>
             </div>
           </BentoCard>
@@ -57,37 +131,45 @@ export function BatchView() {
                      </tr>
                    </thead>
                    <tbody className="divide-y divide-slate-100 dark:divide-white/5 text-sm">
-                     {RECIPIENTS.map(rec => (
+                     {recipients.map(rec => (
                        <tr key={rec.id} className="hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors">
                          <td className="px-6 py-4 font-medium text-slate-900 dark:text-white/90">{rec.recipientId}</td>
                          <td className="px-6 py-4 font-mono text-xs text-blue-600 dark:text-indigo-300/80">{rec.destKey}</td>
-                         <td className="px-6 py-4 font-mono text-right text-slate-900 dark:text-white">{rec.vol}</td>
+                         <td className="px-6 py-4 font-mono text-right text-slate-900 dark:text-white">{rec.vol} {rec.assetCode}</td>
                          <td className="px-6 py-4 text-right">
-                           <button className="text-slate-400 dark:text-white/30 hover:text-red-500 dark:hover:text-red-400 transition p-2 rounded hover:bg-red-50 dark:hover:bg-red-500/10">
+                           <button onClick={() => removeRecipient(rec.id)} className="text-slate-400 dark:text-white/30 hover:text-red-500 dark:hover:text-red-400 transition p-2 rounded hover:bg-red-50 dark:hover:bg-red-500/10">
                              <Trash2 className="w-4 h-4" />
                            </button>
                          </td>
                        </tr>
                      ))}
+                     {recipients.length === 0 && (
+                         <tr>
+                             <td colSpan={4} className="px-6 py-8 text-center text-slate-500 dark:text-white/40">No recipients loaded. Upload a CSV to begin.</td>
+                         </tr>
+                     )}
                    </tbody>
                  </table>
                </div>
                {/* Mobile Verification Grid */}
                <div className="flex flex-col md:hidden divide-y divide-slate-100 dark:divide-white/5">
-                  {RECIPIENTS.map(rec => (
+                  {recipients.map(rec => (
                     <div key={rec.id} className="p-4 flex justify-between items-center hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors gap-4">
                       <div className="flex flex-col gap-1 w-full">
                         <div className="flex justify-between w-full items-start">
                           <span className="font-medium text-sm text-slate-900 dark:text-white/90">{rec.recipientId}</span>
-                          <span className="font-mono text-sm font-bold text-slate-900 dark:text-white">{rec.vol}</span>
+                          <span className="font-mono text-sm font-bold text-slate-900 dark:text-white">{rec.vol} {rec.assetCode}</span>
                         </div>
                         <span className="font-mono text-xs text-blue-600 dark:text-indigo-300/80">{rec.destKey}</span>
                       </div>
-                      <button className="text-slate-400 dark:text-white/30 hover:text-red-500 dark:hover:text-red-400 transition p-2 rounded hover:bg-red-50 dark:hover:bg-red-500/10 flex-shrink-0">
+                      <button onClick={() => removeRecipient(rec.id)} className="text-slate-400 dark:text-white/30 hover:text-red-500 dark:hover:text-red-400 transition p-2 rounded hover:bg-red-50 dark:hover:bg-red-500/10 flex-shrink-0">
                         <Trash2 className="w-[18px] h-[18px]" />
                       </button>
                     </div>
                   ))}
+                  {recipients.length === 0 && (
+                      <div className="p-8 text-center text-slate-500 dark:text-white/40">No recipients loaded.</div>
+                  )}
                </div>
              </BentoCard>
           </div>
@@ -104,40 +186,39 @@ export function BatchView() {
             <div className="space-y-4 flex-1">
               <div className="p-4 bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/5 rounded-xl flex justify-between items-center">
                 <span className="text-sm text-slate-600 dark:text-white/60">Validated Entries</span>
-                <span className="font-mono text-lg text-slate-900 dark:text-white font-bold tracking-tight">402</span>
+                <span className="font-mono text-lg text-slate-900 dark:text-white font-bold tracking-tight">{recipients.length}</span>
               </div>
               <div className="p-4 bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/5 rounded-xl flex justify-between items-center">
                 <span className="text-sm text-slate-600 dark:text-white/60">Total Outflow Volume</span>
-                <span className="font-mono text-lg text-red-600 dark:text-red-400 font-bold tracking-tight">2,540,200.00</span>
+                <span className="font-mono text-lg text-red-600 dark:text-red-400 font-bold tracking-tight">{totalVolume.toLocaleString()}</span>
               </div>
               
               <div className="mt-8">
                 <h4 className="text-xs uppercase text-slate-500 dark:text-white/40 tracking-wider mb-3 font-medium">Origin Asset Ratio</h4>
                 <div className="flex gap-1 h-2 rounded-full overflow-hidden">
-                   <div className="bg-blue-600 dark:bg-indigo-500 w-[70%]" title="USDC" />
-                   <div className="bg-slate-300 dark:bg-indigo-500 w-[30%]" title="XLM" />
+                   {hasUsdc && <div className={`bg-blue-600 dark:bg-indigo-500 ${hasXlm ? 'w-[70%]' : 'w-full'}`} title="USDC" />}
+                   {hasXlm && <div className={`bg-slate-300 dark:bg-slate-500 ${hasUsdc ? 'w-[30%]' : 'w-full'}`} title="XLM" />}
                 </div>
                 <div className="flex justify-between text-[10px] text-slate-500 dark:text-white/40 font-mono mt-2">
-                  <span>USDC (70%)</span>
-                  <span>XLM (30%)</span>
+                  <span>USDC</span>
+                  <span>XLM</span>
                 </div>
-              </div>
-
-              <div className="mt-8 p-4 border border-blue-200 dark:border-indigo-500/20 bg-blue-50 dark:bg-indigo-500/5 rounded-xl">
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-blue-700 dark:text-indigo-300/60">Estimated Gas Fee</span>
-                  <span className="font-mono font-medium text-blue-800 dark:text-indigo-300">0.00041 XLM</span>
-                </div>
-                <p className="text-[10px] text-blue-500 dark:text-indigo-300/40">Highly optimized via Batch V2</p>
               </div>
             </div>
 
             <div className="flex flex-col gap-3 mt-8">
-               <motion.button whileHover={{ scale: 1.02, y: -1 }} whileTap={{ scale: 0.98 }} className="w-full py-3 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-xl text-sm font-medium transition flex items-center justify-center gap-2 text-slate-700 dark:text-white shadow-sm dark:shadow-none">
-                 <ShieldCheck className="w-4 h-4 text-emerald-500 dark:text-emerald-400" /> Run Verification
-               </motion.button>
-               <motion.button whileHover={{ scale: 1.02, y: -1 }} whileTap={{ scale: 0.98 }} className="w-full py-3 bg-blue-600 dark:bg-[#08060D] border dark:border-indigo-500/40 hover:bg-blue-700 dark:hover:bg-indigo-900/20 text-white rounded-xl text-sm font-medium transition flex items-center justify-center gap-2 shadow-lg dark:shadow-[0_0_15px_rgba(79,70,229,0.2)]">
-                 Broadcast to Signers
+               <motion.button 
+                  onClick={executeBatch}
+                  disabled={recipients.length === 0 || loading}
+                  whileHover={{ scale: 1.02, y: -1 }} 
+                  whileTap={{ scale: 0.98 }} 
+                  className={`w-full py-3 border rounded-xl text-sm font-medium transition flex items-center justify-center gap-2 shadow-lg ${
+                    recipients.length === 0 
+                      ? 'bg-slate-300 dark:bg-slate-800 text-slate-500 border-transparent cursor-not-allowed'
+                      : 'bg-blue-600 dark:bg-[#08060D] border dark:border-indigo-500/40 hover:bg-blue-700 dark:hover:bg-indigo-900/20 text-white dark:shadow-[0_0_15px_rgba(79,70,229,0.2)]'
+                  }`}
+               >
+                 {loading ? 'Processing...' : 'Broadcast to Signers'}
                </motion.button>
             </div>
           </BentoCard>
