@@ -36,7 +36,7 @@ export function AnalyticsView() {
       
       const amountStr = typeof tx.amount === 'string' ? tx.amount.replace(/,/g, '') : String(tx.amount);
       const val = parseFloat(amountStr);
-      if (!isNaN(val)) {
+      if (!isNaN(val) && dayName && buckets[dayName]) {
         if (tx.type === 'Outgoing') {
            buckets[dayName].spend += val;
         } else {
