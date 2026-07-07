@@ -5,19 +5,19 @@ import { ArrowRightLeft } from 'lucide-react';
 
 export function TransferView() {
   const [walletKey, setWalletKey] = useState<string | null>(null);
-  const [balance, setBalance] = useState<number>(0);
-  const [maxLimit, setMaxLimit] = useState<number>(50000);
+  const [balance, setBalance] = useState<string | null>("0");
+  const [maxLimit, setMaxLimit] = useState<bigint | null>(50000n);
 
   const handleConnect = () => {
     setWalletKey('GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX');
-    setBalance(150000);
-    setMaxLimit(250000);
+    setBalance("150000");
+    setMaxLimit(250000n);
   };
 
   const handleDisconnect = () => {
     setWalletKey(null);
-    setBalance(0);
-    setMaxLimit(50000);
+    setBalance("0");
+    setMaxLimit(50000n);
   };
 
   return (
