@@ -183,9 +183,8 @@ export async function contractAddVault(
 
     const sim = await SOROBAN_SERVER.simulateTransaction(tx);
     if (rpc.Api.isSimulationError(sim)) {
-      const code = parseInt(sim.error.replace(/\D/g, ""), 10);
-      if (!isNaN(code) && code > 0) throw new ContractRevertError(code);
-      throw new SimulationFailedError(sim.error);
+      console.error("RAW SIMULATION ERROR:", sim.error);
+      throw new SimulationFailedError(`Simulation failed: ${sim.error}`);
     }
 
     const preparedTx = rpc.assembleTransaction(tx, sim).build();
@@ -245,9 +244,8 @@ export async function contractRoutePayout(
 
     const sim = await SOROBAN_SERVER.simulateTransaction(tx);
     if (rpc.Api.isSimulationError(sim)) {
-      const code = parseInt(sim.error.replace(/\D/g, ""), 10);
-      if (!isNaN(code) && code > 0) throw new ContractRevertError(code);
-      throw new SimulationFailedError(sim.error);
+      console.error("RAW SIMULATION ERROR:", sim.error);
+      throw new SimulationFailedError(`Simulation failed: ${sim.error}`);
     }
 
     const preparedTx = rpc.assembleTransaction(tx, sim).build();
@@ -320,9 +318,8 @@ export async function contractProposeTransfer(
 
     const sim = await SOROBAN_SERVER.simulateTransaction(tx);
     if (rpc.Api.isSimulationError(sim)) {
-      const code = parseInt(sim.error.replace(/\D/g, ""), 10);
-      if (!isNaN(code) && code > 0) throw new ContractRevertError(code);
-      throw new SimulationFailedError(sim.error);
+      console.error("RAW SIMULATION ERROR:", sim.error);
+      throw new SimulationFailedError(`Simulation failed: ${sim.error}`);
     }
 
     const preparedTx = rpc.assembleTransaction(tx, sim).build();
@@ -391,9 +388,8 @@ export async function contractApproveProposal(
 
     const sim = await SOROBAN_SERVER.simulateTransaction(tx);
     if (rpc.Api.isSimulationError(sim)) {
-      const code = parseInt(sim.error.replace(/\D/g, ""), 10);
-      if (!isNaN(code) && code > 0) throw new ContractRevertError(code);
-      throw new SimulationFailedError(sim.error);
+      console.error("RAW SIMULATION ERROR:", sim.error);
+      throw new SimulationFailedError(`Simulation failed: ${sim.error}`);
     }
 
     const preparedTx = rpc.assembleTransaction(tx, sim).build();

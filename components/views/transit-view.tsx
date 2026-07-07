@@ -10,6 +10,8 @@ import {
   STAGE_ORDER,
 } from '@/lib/stores/transaction-store';
 import { BentoCard } from '@/components/ui/bento-card';
+import { Button } from '@/components/ui/button';
+import { connectFreighterWallet, contractRoutePayout, checkFreighter } from '@/lib/stellar';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -109,12 +111,14 @@ function SessionCard({
     blockHeight?: string;
     baseFee?: string;
     createdAt?: string;
+    destination?: string;
     breakdown?: Record<string, string>;
   };
   pipeline?: TransitPipeline | null;
 }) {
   const [isPressed, setIsPressed] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [isExecuting, setIsExecuting] = useState(false);
 
   const currentStatus = pipeline?.currentStage ?? session.status;
   const currentIdx = STAGE_ORDER.indexOf(currentStatus);
@@ -328,6 +332,43 @@ function SessionCard({
                     <span className="text-[11px] font-mono text-slate-600 dark:text-white/70">{session.baseFee} XLM</span>
                   </div>
                 )}
+                
+                {/* Execute Payout Button */}
+                {currentStatus === 'SETTLED' && session.destination && (
+                  <div className="col-span-2 mt-2">
+                    <Button 
+                      className="w-full bg-purple-600 hover:bg-purple-700 text-white" 
+                      disabled={isExecuting}
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        setIsExecuting(true);
+                        try {
+                          const wallet = await connectFreighterWallet();
+                          const adminPubKey = process.env.NEXT_PUBLIC_DEPLOYER_PUBLIC_KEY || "GAICQ6KXUWZPJFWDWECQWNQTMDHHZKOEBI7PJ4FUJS6HG6K5FDFD5S6F";
+                          const currentAccount = await checkFreighter();
+                          
+                          if (currentAccount.publicKey !== adminPubKey) {
+                            alert("Unauthorized: Only the Master Admin can execute the final payout routing.");
+                            setIsExecuting(false);
+                            return;
+                          }
+                          
+                          const totalTargetStroops = BigInt(Math.floor(session.amount * 10_000_000));
+                          const res = await contractRoutePayout(wallet, totalTargetStroops, session.destination!);
+                          
+                          if (!res.success) throw new Error(res.error);
+                          alert(`Execution successful! Tokens have been routed to the destination on-chain.\nHash: ${res.hash}`);
+                        } catch (err: any) {
+                          alert(`Execution failed: ${err.message}`);
+                        } finally {
+                          setIsExecuting(false);
+                        }
+                      }}
+                    >
+                      {isExecuting ? 'Executing On-Chain...' : 'Execute On-Chain Payout'}
+                    </Button>
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
@@ -398,6 +439,7 @@ export function TransitView({ onNavigate }: { onNavigate?: (view: any) => void }
     blockHeight?: string;
     baseFee?: string;
     createdAt?: string;
+    destination?: string;
     breakdown?: Record<string, string>;
     pipeline?: TransitPipeline | null;
   };
@@ -415,6 +457,7 @@ export function TransitView({ onNavigate }: { onNavigate?: (view: any) => void }
       blockHeight: '8841829',
       baseFee: '0.00010',
       createdAt: matchTx?.createdAt,
+      destination: matchTx?.destination,
       breakdown: matchTx?.sourceBreakdown,
       pipeline: activePipeline,
     });
@@ -430,6 +473,7 @@ export function TransitView({ onNavigate }: { onNavigate?: (view: any) => void }
       blockHeight: '8841829',
       baseFee: '0.00010',
       createdAt: tx.createdAt,
+      destination: tx.destination,
       breakdown: tx.sourceBreakdown,
     });
   });
