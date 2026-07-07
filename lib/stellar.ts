@@ -372,9 +372,8 @@ export async function contractApproveProposal(
   }
   try {
     const contract = new Contract(CONTRACT_ID);
-    // ✅ Trap 1: sourceAccount = admin (master wallet pays ALL gas fees).
-    //           The approver signs their auth entry but pays absolutely nothing.
-    const sourceAccount = await SOROBAN_SERVER.getAccount(adminPublicKey);
+    // User pays gas to approve
+    const sourceAccount = await SOROBAN_SERVER.getAccount(approverPublicKey);
 
     const tx = new TransactionBuilder(sourceAccount, {
       fee: "1000000",

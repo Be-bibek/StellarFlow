@@ -114,6 +114,20 @@ export function RoutingView({ onNavigate }: { onNavigate?: (view: any) => void }
         throw new Error(response.error);
       }
 
+      // Add to Transit Center (Local Simulation tracking)
+      useTransactionStore.getState().addTransaction({
+        id: `t-${response.proposalId || Date.now()}`,
+        transferId: `ONCHAIN-PROP-${response.proposalId || Date.now()}`,
+        orgId: "org-1",
+        amount,
+        assetCode: "native",
+        destination: destination.trim(),
+        sourceBreakdown: jitSimulation.breakdown,
+        status: reqApprovals > 0 ? "AUTHORIZING" : "SETTLED",
+        stellarTxHash: response.hash,
+        createdAt: new Date().toISOString(),
+      });
+
       // Wait for ledger
       await new Promise(r => setTimeout(r, 4000));
 

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BentoCard } from '@/components/ui/bento-card';
 import { motion, AnimatePresence } from 'motion/react';
+import { useTransactionStore } from '@/lib/stores/transaction-store';
 import {
   ShieldCheck, Clock, CheckCircle2, XCircle, FileText,
   ChevronRight, AlertTriangle, Activity, Eye, Send,
@@ -187,7 +188,17 @@ function ApprovalInbox({ onNavigateToAudit, onNavigate }: { onNavigateToAudit: (
     try {
       const wallet = await connectFreighterWallet();
       const admin = process.env.NEXT_PUBLIC_DEPLOYER_PUBLIC_KEY || "GAICQ6KXUWZPJFWDWECQWNQTMDHHZKOEBI7PJ4FUJS6HG6K5FDFD5S6F";
-      await contractApproveProposal(wallet, admin, Number(req.id));
+      const response = await contractApproveProposal(wallet, admin, Number(req.id));
+      if (!response.success) throw new Error(response.error);
+      
+      const currentApprovals = Number(req.metadata?.current_approvals) || 0;
+      const requiredApprovals = Number(req.metadata?.required_approvals) || 2;
+      const isLastApproval = currentApprovals + 1 >= requiredApprovals;
+      
+      if (isLastApproval) {
+        useTransactionStore.getState().updateTransactionStatus(req.transfer_id, "SETTLED", { hash: response.hash });
+      }
+      
       showToast('Approved! Waiting for ledger to settle...');
       await new Promise(r => setTimeout(r, 4000));
     } catch (e: any) {
