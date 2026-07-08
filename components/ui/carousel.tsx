@@ -8,6 +8,10 @@ export interface CarouselItem {
   description: string;
   id: number;
   icon: React.ReactNode;
+  colorFrom?: string;
+  colorTo?: string;
+  cardType?: 'DEBIT' | 'CREDIT';
+  cardNumber?: string;
 }
 
 export interface CarouselProps {
@@ -80,8 +84,8 @@ function CarouselItem({ item, index, itemWidth, round, trackItemOffset, x, trans
       className={`relative shrink-0 flex flex-col ${
         round
           ? 'items-center justify-center text-center bg-slate-900 dark:bg-[#120F17] border-0'
-          : 'items-start justify-between bg-white dark:bg-[#110E1C] border border-slate-200 dark:border-white/10 rounded-[12px] shadow-sm'
-      } overflow-hidden cursor-grab active:cursor-grabbing`}
+          : 'items-start justify-between bg-slate-900 border border-white/10 rounded-[20px]'
+      } overflow-hidden cursor-grab active:cursor-grabbing shadow-xl ring-1 ring-white/10`}
       style={{
         width: itemWidth,
         height: round ? itemWidth : '100%',
@@ -90,14 +94,72 @@ function CarouselItem({ item, index, itemWidth, round, trackItemOffset, x, trans
       }}
       transition={transition}
     >
-      <div className={`${round ? 'p-0 m-0' : 'mb-4 p-5'}`}>
-        <span className="flex h-[28px] w-[28px] items-center justify-center rounded-full bg-blue-600 dark:bg-blue-500">
+      {/* Animated SVG Background for Smart Wallet Vibe */}
+      <div className="absolute inset-0 z-0 opacity-60 mix-blend-screen pointer-events-none">
+        <svg viewBox="0 0 400 400" className="w-full h-full object-cover">
+          <motion.circle 
+            cx="50" cy="50" r="250" 
+            fill={`url(#grad1-${item.id})`}
+            animate={{ cx: [50, 150, 50], cy: [50, 100, 50] }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <motion.circle 
+            cx="350" cy="350" r="300" 
+            fill={`url(#grad2-${item.id})`}
+            animate={{ cx: [350, 250, 350], cy: [350, 200, 350] }}
+            transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <defs>
+            <radialGradient id={`grad1-${item.id}`}>
+              <stop offset="0%" stopColor={item.colorFrom || '#3b82f6'} stopOpacity="0.6" />
+              <stop offset="100%" stopColor={item.colorFrom || '#3b82f6'} stopOpacity="0" />
+            </radialGradient>
+            <radialGradient id={`grad2-${item.id}`}>
+              <stop offset="0%" stopColor={item.colorTo || '#8b5cf6'} stopOpacity="0.5" />
+              <stop offset="100%" stopColor={item.colorTo || '#8b5cf6'} stopOpacity="0" />
+            </radialGradient>
+          </defs>
+        </svg>
+      </div>
+
+      <div className={`relative z-10 flex justify-between items-start w-full ${round ? 'p-0 m-0' : 'p-6'}`}>
+        <span className="flex h-[40px] w-[40px] items-center justify-center rounded-full bg-black/40 backdrop-blur-md border border-white/20 shadow-lg text-white">
           {item.icon}
         </span>
+        {!round && (
+          <span className="text-white/50 tracking-[0.2em] font-bold text-xs uppercase mix-blend-overlay">
+            {item.cardType || 'DEBIT'}
+          </span>
+        )}
       </div>
-      <div className="p-5">
-        <div className="mb-1 font-black text-lg text-slate-900 dark:text-white">{item.title}</div>
-        <p className="text-sm text-slate-500 dark:text-slate-400">{item.description}</p>
+
+      {/* Credit Card Chip */}
+      {!round && (
+        <div className="relative z-10 px-6 mt-2 opacity-80">
+          <svg width="36" height="28" viewBox="0 0 36 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="36" height="28" rx="6" fill="#FBBF24" fillOpacity="0.8"/>
+            <path d="M0 10H36M0 18H36M12 0V28M24 0V28" stroke="#B45309" strokeWidth="1" strokeOpacity="0.6"/>
+          </svg>
+        </div>
+      )}
+
+      {/* Large Watermark Mask */}
+      {!round && (
+        <div className="absolute right-[-20px] bottom-10 z-0 opacity-10 pointer-events-none transform -rotate-12 select-none">
+          <span className="text-7xl font-black italic text-white mix-blend-overlay">
+            {item.cardType || 'DEBIT'}
+          </span>
+        </div>
+      )}
+
+      <div className="relative z-10 p-6 flex flex-col h-full justify-end">
+        {item.cardNumber && (
+          <div className="mb-4 font-mono text-xl text-white/90 tracking-widest drop-shadow-md">
+            {item.cardNumber}
+          </div>
+        )}
+        <div className="mb-1 font-black text-2xl tracking-tight text-white drop-shadow-md uppercase">{item.title}</div>
+        <div className="text-sm font-medium text-white/80 drop-shadow-sm">{item.description}</div>
       </div>
     </motion.div>
   );
@@ -248,16 +310,16 @@ export default function Carousel({
   return (
     <div
       ref={containerRef}
-      className={`relative overflow-hidden p-4 ${
-        round ? 'rounded-full border border-slate-200 dark:border-white/10' : 'rounded-[24px] border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5'
+      className={`relative overflow-hidden p-4 flex flex-col h-full w-full ${
+        round ? 'rounded-full border border-white' : ''
       }`}
       style={{
-        width: `${baseWidth}px`,
+        width: `100%`,
         ...(round && { height: `${baseWidth}px` })
       }}
     >
       <motion.div
-        className="flex h-full"
+        className="flex h-[calc(100%-40px)]"
         drag={isAnimating ? false : 'x'}
         {...dragProps}
         style={{
@@ -286,28 +348,20 @@ export default function Carousel({
           />
         ))}
       </motion.div>
-      <div className={`flex w-full justify-center ${round ? 'absolute z-20 bottom-12 left-1/2 -translate-x-1/2' : ''}`}>
-        <div className="mt-4 flex w-[150px] justify-between px-8">
+      <div className={`absolute bottom-2 left-0 right-0 flex w-full justify-center z-20`}>
+        <div className="flex w-[150px] justify-center gap-3">
           {items.map((_, index) => (
             <motion.button
               type="button"
               key={index}
               aria-label={`Go to slide ${index + 1}`}
               aria-current={activeIndex === index}
-              className={`h-2 w-2 rounded-full cursor-pointer border-0 p-0 appearance-none transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
+              className={`h-2.5 w-2.5 rounded-full cursor-pointer border-0 p-0 appearance-none transition-all duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 shadow-sm ${
                 activeIndex === index
-                  ? round
-                    ? 'bg-white'
-                    : 'bg-blue-500'
-                  : round
-                    ? 'bg-[#555]'
-                    : 'bg-slate-300 dark:bg-[rgba(255,255,255,0.4)]'
+                  ? 'bg-blue-500 w-6'
+                  : 'bg-slate-300 dark:bg-slate-600 hover:bg-slate-400 dark:hover:bg-slate-500'
               }`}
-              animate={{
-                scale: activeIndex === index ? 1.2 : 1
-              }}
               onClick={() => setPosition(loop ? index + 1 : index)}
-              transition={{ duration: 0.15 }}
             />
           ))}
         </div>
