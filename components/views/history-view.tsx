@@ -401,10 +401,12 @@ export function HistoryView() {
   const [timelines, setTimelines] = useState<ProposalTimelineRecord[]>([]);
   const [onChainTxs, setOnChainTxs] = React.useState<StellarTransaction[]>([]);
   const transactions            = useTransactionStore((s) => s.transactions);
+  const fetchTransactions       = useTransactionStore((s) => s.fetchTransactions);
   const activePipeline          = useTransactionStore((s) => s.activePipeline);
   const pipelineIsRunning       = useTransactionStore((s) => s.pipelineIsRunning);
 
   React.useEffect(() => {
+    fetchTransactions();
     fetchProposalTimelines().then(data => {
       setTimelines(data);
       const mapped: StellarTransaction[] = data.map(p => ({

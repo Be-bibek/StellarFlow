@@ -225,14 +225,14 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
       if (!res.ok) throw new Error('Failed to fetch transactions');
       const data = await res.json();
       
-      // Load client-signed transactions from localStorage
+      // We no longer rely on client-side localStorage since the Postgres DB is fully reliable.
+      // Clear old client transactions to prevent stale data (like ONCHAIN-PROP-1) from overriding real DB data.
       let clientTxs: StellarTransaction[] = [];
       if (typeof window !== "undefined") {
         try {
-          const stored = localStorage.getItem("client_transactions");
-          if (stored) clientTxs = JSON.parse(stored);
+          localStorage.removeItem("client_transactions");
         } catch (err) {
-          console.error("Failed to parse client transactions", err);
+          // ignore
         }
       }
 
