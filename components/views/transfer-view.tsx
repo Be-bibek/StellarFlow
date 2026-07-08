@@ -100,26 +100,36 @@ export function TransferView() {
           </div>
         </div>
 
-        {/* Right Side: Transfer Form with LaserFlow Background */}
-        <div className="flex-1 w-full min-w-0 relative flex items-center justify-center min-h-[500px] rounded-[24px]">
-          <div className="absolute inset-0 z-0 opacity-100 pointer-events-none mix-blend-screen" style={{ transform: 'scale(1.5) rotate(180deg)', transformOrigin: 'center center' }}>
+        {/* Right Side: Transfer Form with LaserFlow */}
+        <div className="flex-1 w-full min-w-0 relative h-[750px] rounded-[24px] overflow-hidden bg-[#080512] shadow-2xl border border-white/5">
+          {/* LaserFlow Background */}
+          <div className="absolute inset-0 z-0 opacity-100 mix-blend-screen pointer-events-none">
             <LaserFlow 
               color="#a855f7" 
-              horizontalSizing={3.0} 
-              verticalSizing={2.5} 
-              wispDensity={2.5}
+              horizontalBeamOffset={0.0} 
+              verticalBeamOffset={0.15} // Shifts origin UP to ~35% from the top
+              fogIntensity={2.5} // "More cloudy"
+              wispDensity={3.0}
               wispSpeed={20}
-              fogIntensity={0.6}
+              horizontalSizing={1.0}
             />
           </div>
-          <div className="relative z-10 w-full p-4 lg:p-8">
-            <TreasuryRouter 
-              walletKey={walletKey} 
-              balance={balance} 
-              maxLimit={maxLimit} 
-              onConnect={handleConnect} 
-              onDisconnect={handleDisconnect}
-            />
+          
+          {/* Transfer Form Box positioned to align exactly with the Laser origin */}
+          <div className="absolute left-[4%] right-[4%] top-[35%] bottom-[4%] z-10 border-t-[3px] border-[#a855f7] border-l border-r border-white/5 rounded-t-[20px] rounded-b-[20px] bg-[#050308]/90 backdrop-blur-2xl flex flex-col justify-start overflow-hidden shadow-[0_-15px_50px_rgba(168,85,247,0.25)]">
+            
+            {/* Glowing inner top edge */}
+            <div className="absolute top-0 left-0 right-0 h-2 bg-[#a855f7] blur-[12px] opacity-70" />
+            
+            <div className="p-4 lg:p-8 h-full overflow-y-auto custom-scrollbar relative z-10">
+              <TreasuryRouter 
+                walletKey={walletKey} 
+                balance={balance} 
+                maxLimit={maxLimit} 
+                onConnect={handleConnect} 
+                onDisconnect={handleDisconnect}
+              />
+            </div>
           </div>
         </div>
       </div>
