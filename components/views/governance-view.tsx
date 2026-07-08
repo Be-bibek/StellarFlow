@@ -277,7 +277,7 @@ function ApprovalInbox({ onNavigateToAudit, onNavigate }: { onNavigateToAudit: (
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            signer_address: wallet.publicKey,
+            signer_address: wallet,
             tx_hash:        response.hash,
           }),
         }).catch(err => console.warn('Failed to record approval hash:', err));
