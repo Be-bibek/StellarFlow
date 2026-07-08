@@ -73,7 +73,7 @@ export function TransferView() {
   };
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto h-full overflow-y-auto overflow-x-hidden pb-20 p-6">
+    <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto h-full p-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-2">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-[#F8FAFC] flex items-center gap-3">
@@ -101,22 +101,22 @@ export function TransferView() {
         </div>
 
         {/* Right Side: Transfer Form with LaserFlow */}
-        <div className="flex-1 w-full min-w-0 relative h-[600px]">
-          {/* LaserFlow Background - Transparent and blending with global app background */}
-          <div className="absolute inset-0 z-0 opacity-100 mix-blend-screen pointer-events-none">
-            <LaserFlow 
-              color="#a855f7" 
-              horizontalBeamOffset={0.0} 
-              verticalBeamOffset={0.25} // Origin at ~25% from the top
-              fogIntensity={2.5} 
-              wispDensity={3.0}
-              wispSpeed={20}
-              horizontalSizing={1.0}
-            />
-          </div>
+        <div className="flex-1 w-full min-w-0 relative">
           
-          {/* Transfer Form Box positioned so its top edge aligns with the laser origin */}
-          <div className="absolute left-0 right-0 top-[25%] z-10">
+          <div className="relative z-10 w-full">
+            {/* LaserFlow Background - Spans infinitely upwards from the top edge of the box */}
+            <div className="absolute bottom-[calc(100%-30px)] left-0 right-0 w-full h-[600px] opacity-100 mix-blend-screen pointer-events-none z-0">
+              <LaserFlow 
+                color="#a855f7" 
+                horizontalBeamOffset={0.0} 
+                verticalBeamOffset={-0.45} // Origin exactly near the bottom edge of this canvas
+                fogIntensity={2.5} 
+                wispDensity={3.0}
+                wispSpeed={20}
+                horizontalSizing={1.0}
+              />
+            </div>
+
             <TreasuryRouter 
               walletKey={walletKey} 
               balance={balance} 
