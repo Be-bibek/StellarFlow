@@ -6,3 +6,4 @@ pub mod transactions;
 pub mod jit;
 pub mod governance;
 pub mod funding;
+pub mod soroban_proposals;

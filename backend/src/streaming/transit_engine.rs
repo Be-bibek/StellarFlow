@@ -157,6 +157,26 @@ pub async fn soroban_event_poller(state: Arc<AppState>) {
     let mut cursor_ledger: u64 = 0;
     let mut ticker = interval(Duration::from_millis(poll_interval_ms));
 
+    // Initialize cursor by asking for latest ledger
+    let init_req = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "getLatestLedger",
+        "params": {}
+    });
+    if let Ok(resp) = http_client.post(&rpc_url).json(&init_req).send().await {
+        if let Ok(body) = resp.json::<serde_json::Value>().await {
+            if let Some(seq) = body.get("result").and_then(|r| r.get("sequence")).and_then(|s| s.as_u64()) {
+                // Rewind 50 ledgers just in case
+                cursor_ledger = seq.saturating_sub(50);
+            }
+        }
+    }
+    if cursor_ledger == 0 {
+        tracing::warn!("Failed to getLatestLedger on startup, defaulting cursor to a recent ledger");
+        cursor_ledger = 3400000; // rough fallback for testnet
+    }
+
     loop {
         ticker.tick().await;
 
@@ -264,7 +284,9 @@ fn parse_soroban_event(raw: &serde_json::Value) -> Option<TransitEvent> {
         .and_then(|arr| arr.first())
         .and_then(|v| v.as_str())
         .unwrap_or("")
-        .to_lowercase();
+        .to_string();
+
+    tracing::warn!("RAW TOPIC FROM SOROBAN: {}", topic);
 
     let ledger_closed_at = raw
         .get("ledgerClosedAt")
@@ -272,13 +294,22 @@ fn parse_soroban_event(raw: &serde_json::Value) -> Option<TransitEvent> {
         .unwrap_or_default()
         .to_string();
 
-    // Map Soroban event topics to TransitEventType.
+    // Soroban topic is an array of base64 XDR strings. 
+    // We match against the base64 representations of the symbols.
+    // Symbol("proposed") -> "AAAADwAAAAhwcm9wb3NlZA=="
+    // Symbol("approved") -> "AAAADwAAAAhhcHByb3ZlZA=="
+    // Symbol("executed") -> "AAAADwAAAAhleGVjdXRlZA=="
+    // Symbol("routed")   -> "AAAADwAAAAZyb3V0ZWQA"
+    // Symbol("settled")  -> "AAAADwAAAAdzZXR0bGVk"
+    // Symbol("failed")   -> "AAAADwAAAAZmYWlsZWQA"
+    
     let (event_type, new_status) = match topic.as_str() {
-        "netting" => (TransitEventType::TransactionSettled, Some("SETTLED".into())),
-        "routed" => (TransitEventType::PayoutRouted,    Some("STELLAR_LEDGER".into())),
-        "approved" => (TransitEventType::ApprovalGranted, Some("ROUTING".into())),
-        "settled" => (TransitEventType::TransactionSettled, Some("SETTLED".into())),
-        "failed"  => (TransitEventType::TransactionFailed,  Some("FAILED".into())),
+        "AAAADwAAAAhwcm9wb3NlZA==" => (TransitEventType::ApprovalGranted, Some("PENDING".into())),
+        "AAAADwAAAAhhcHByb3ZlZA==" => (TransitEventType::ApprovalGranted, Some("ROUTING".into())),
+        "AAAADwAAAAhleGVjdXRlZA==" => (TransitEventType::TransactionSettled, Some("SETTLED".into())),
+        "AAAADwAAAAZyb3V0ZWQA"   => (TransitEventType::PayoutRouted,    Some("STELLAR_LEDGER".into())),
+        "AAAADwAAAAdzZXR0bGVk"  => (TransitEventType::TransactionSettled, Some("SETTLED".into())),
+        "AAAADwAAAAZmYWlsZWQA"   => (TransitEventType::TransactionFailed,  Some("FAILED".into())),
         _ => return None, // Unknown event — skip silently.
     };
 

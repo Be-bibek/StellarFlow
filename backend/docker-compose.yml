@@ -26,6 +26,20 @@ services:
     volumes:
       - redisdata:/data
 
+  backend:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: postgres://stellarflow:stellarflow_dev@postgres:5432/stellarflow_db
+      REDIS_URL: redis://redis:6379/
+      TREASURY_CONTRACT_ID: CCV7V5EOPNBSLKF4SRKHLRBA556HLUZLLIOCVR3OBZLLU4LD5DGISUPB
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - redis
+
 volumes:
   pgdata:
   redisdata:

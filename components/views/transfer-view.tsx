@@ -6,7 +6,7 @@ import { ArrowRightLeft } from 'lucide-react';
 export function TransferView() {
   const [walletKey, setWalletKey] = useState<string | null>(null);
   const [balance, setBalance] = useState<string | null>("0");
-  const [maxLimit, setMaxLimit] = useState<bigint | null>(50000n);
+  const [maxLimit, setMaxLimit] = useState<bigint | null>(BigInt(50000));
 
   const handleConnect = () => {
     setWalletKey('GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX');

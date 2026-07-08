@@ -8,7 +8,7 @@ import {
   ShieldCheck, Clock, CheckCircle2, XCircle, FileText,
   ChevronRight, AlertTriangle, Activity, Eye, Send,
   RefreshCw, Filter, Download, Zap, User, ArrowRight,
-  BadgeCheck, Shield, List
+  BadgeCheck, Shield, List, ExternalLink, Link2
 } from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -57,6 +57,27 @@ interface AuditLog {
   created_at: string;
 }
 
+interface ApprovalStepRecord {
+  step_number: number;
+  signer_address: string;
+  tx_hash: string;
+  signed_at: string;
+}
+
+interface ProposalTimelineRecord {
+  proposal_id: number;
+  creation_hash: string | null;
+  proposer_address: string | null;
+  recipient_address: string | null;
+  amount_stroops: number | null;
+  required_approvals: number;
+  executed: boolean;
+  execution_hash: string | null;
+  vault_breakdown: any[];
+  approvals: ApprovalStepRecord[];
+  created_at: string;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // API helpers
 // ─────────────────────────────────────────────────────────────────────────────
@@ -68,43 +89,83 @@ import {
   connectFreighterWallet,
 } from '@/lib/stellar';
 
+const STELLAR_EXPLORER = 'https://stellar.expert/explorer/testnet/tx';
+
 // In local dev, Next.js rewrites /api/* -> http://127.0.0.1:8080/api/v1/*
 // In production, Vercel routes /api/* to the deployed Render backend URL.
 const API = '/api/gov';
+const SOROBAN_API = '/api/soroban';
+
+async function fetchProposalTimelines(): Promise<ProposalTimelineRecord[]> {
+  try {
+    const res = await fetch(`${SOROBAN_API}/proposals`);
+    if (!res.ok) return [];
+    return await res.json();
+  } catch {
+    return [];
+  }
+}
 
 async function fetchPending(): Promise<GovernanceRequest[]> {
   try {
     const rawProposals = await fetchAllOnChainProposals();
-    return rawProposals.map(p => ({
-      id: String(p.id),
-      org_id: 'org_1',
-      transfer_id: `ONCHAIN-PROP-${p.id}`,
-      amount: String(Number(p.amount) / 10000000), // Stroops to XLM
-      asset_code: 'NATIVE',
-      destination: p.recipient,
-      purpose: 'Decentralized Multi-Sig Transfer',
-      required_approvals: p.required,
-      current_approvals: p.approvers ? p.approvers.length : 0,
-      status: p.executed ? 'SETTLED' : 'PENDING_APPROVAL',
-      requester_id: p.proposer,
-      expires_at: new Date(Date.now() + 86400000).toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }));
+    return rawProposals
+      .filter(p => !p.executed) // ← Only show proposals that haven't been executed yet
+      .map(p => ({
+        id: String(p.id),
+        org_id: 'org_1',
+        transfer_id: `ONCHAIN-PROP-${p.id}`,
+        amount: String(Number(p.amount) / 10000000), // Stroops to XLM
+        asset_code: 'NATIVE',
+        destination: p.recipient,
+        purpose: 'Decentralized Multi-Sig Transfer',
+        required_approvals: p.required,
+        current_approvals: p.approvers ? p.approvers.length : 0,
+        status: 'PENDING_APPROVAL',
+        requester_id: p.proposer,
+        expires_at: new Date(Date.now() + 86400000).toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }));
   } catch (error) {
     console.error("Failed to load on-chain proposals:", error);
     return [];
   }
 }
 
-async function fetchHistory(): Promise<HistoryItem[]> {
+async function fetchHistory(onChainProposals: GovernanceRequest[]): Promise<HistoryItem[]> {
   try {
     const r = await fetch(`${API}/approvals/history?limit=50`);
-    if (!r.ok) return [];
-    return r.json();
+    let dbHistory: HistoryItem[] = [];
+    if (r.ok) {
+      dbHistory = await r.json();
+    }
+    
+    // Convert on-chain settled proposals into HistoryItem format
+    const settledOnChain = onChainProposals
+      .filter(p => p.status === 'SETTLED')
+      .map(p => ({
+        request: p,
+        actions: [
+          {
+            id: `exec-${p.id}`,
+            governance_request_id: p.id,
+            actor_id: p.requester_id,
+            action: 'EXECUTED ON-CHAIN',
+            created_at: p.updated_at
+          }
+        ]
+      }));
+
+    return [...settledOnChain, ...dbHistory];
   } catch (e) {
     console.error("Failed to fetch history:", e);
-    return [];
+    return onChainProposals
+      .filter(p => p.status === 'SETTLED')
+      .map(p => ({
+        request: p,
+        actions: []
+      }));
   }
 }
 
@@ -209,17 +270,44 @@ function ApprovalInbox({ onNavigateToAudit, onNavigate }: { onNavigateToAudit: (
         useTransactionStore.getState().updateTransactionStatus(req.transfer_id, "SETTLED", { hash: response.hash });
       }
       
+      // ── Record approval hash in DB (fire-and-forget) ──────────────────────
+      if (response.hash && req.id) {
+        // Log the approval step
+        fetch(`${SOROBAN_API}/proposals/${req.id}/approvals`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            signer_address: wallet.publicKey,
+            tx_hash:        response.hash,
+          }),
+        }).catch(err => console.warn('Failed to record approval hash:', err));
+
+        // If this was the final approval, also mark as executed with vault breakdown
+        if (isLastApproval) {
+          const vaultBreakdown = (req as any).vault_breakdown || [];
+          fetch(`${SOROBAN_API}/proposals/${req.id}/execute`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              execution_hash:  response.hash,
+              vault_breakdown: vaultBreakdown,
+            }),
+          }).catch(err => console.warn('Failed to record execution hash:', err));
+        }
+      }
+      
       showToast('Approved! Waiting for ledger to settle...');
       await new Promise(r => setTimeout(r, 4000));
     } catch (e: any) {
       console.error(e);
-      showToast('Approval failed: ' + e.message);
+      let errMsg = e.message;
+      if (errMsg.includes("UnreachableCodeReached") || errMsg.includes("Simulation failed")) {
+         errMsg = "You have already approved this proposal, or the transaction was rejected by the smart contract.";
+      }
+      showToast('Approval failed: ' + errMsg);
     }
     setActionStates(s => ({ ...s, [`${req.id}_approve`]: 'done' }));
     await load();
-    if (onNavigate) {
-      setTimeout(() => onNavigate('transit'), 1500);
-    }
   };
 
   const handleReject = async (req: GovernanceRequest) => {
@@ -355,68 +443,93 @@ function ApprovalInbox({ onNavigateToAudit, onNavigate }: { onNavigateToAudit: (
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Panel B — Approval Timeline
+// Panel B — Approval Timeline (Blockchain Transaction Links)
 // ─────────────────────────────────────────────────────────────────────────────
 
+function TxLink({ hash, label }: { hash: string; label?: string }) {
+  const short = `${hash.slice(0, 8)}...${hash.slice(-8)}`;
+  return (
+    <a
+      href={`${STELLAR_EXPLORER}/${hash}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-1.5 text-xs font-mono text-violet-400 hover:text-violet-300 hover:underline transition-colors"
+    >
+      <ExternalLink className="w-3 h-3 flex-shrink-0" />
+      {label || short}
+    </a>
+  );
+}
+
 function ApprovalTimeline() {
-  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [timelines, setTimelines] = useState<ProposalTimelineRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<HistoryItem | null>(null);
+  const [selected, setSelected] = useState<ProposalTimelineRecord | null>(null);
 
-  const STAGES = ['PENDING_APPROVAL', 'APPROVED', 'EXECUTING', 'SETTLED'];
-
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      setHistory(await fetchHistory());
-      setLoading(false);
-    })();
+  const load = useCallback(async () => {
+    setLoading(true);
+    const data = await fetchProposalTimelines();
+    setTimelines(data);
+    if (data.length > 0 && !selected) setSelected(data[0]);
+    setLoading(false);
   }, []);
 
-  const stageIndex = (status: string) => {
-    const s = STAGES.indexOf(status);
-    return s < 0 ? (status === 'REJECTED' || status === 'FAILED' ? -1 : 0) : s;
-  };
+  useEffect(() => { load(); }, [load]);
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
-      {/* Request list */}
+      {/* Proposal list */}
       <BentoCard delay={0.1} className="xl:col-span-2 flex flex-col p-6">
         <div className="flex items-center gap-3 mb-5">
           <div className="p-2 rounded-xl bg-blue-500/10">
-            <List className="w-5 h-5 text-blue-400" />
+            <Link2 className="w-5 h-5 text-blue-400" />
           </div>
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">All Requests</h3>
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">On-Chain Proposals</h3>
+            <p className="text-xs text-slate-500">{timelines.length} proposal{timelines.length !== 1 ? 's' : ''} tracked</p>
+          </div>
+          <button onClick={load} className="ml-auto p-1.5 text-slate-400 hover:text-violet-400 transition-colors">
+            <RefreshCw className="w-4 h-4" />
+          </button>
         </div>
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <RefreshCw className="w-6 h-6 text-slate-400 animate-spin" />
           </div>
-        ) : history.length === 0 ? (
+        ) : timelines.length === 0 ? (
           <div className="flex flex-col items-center py-10 gap-2 text-center">
             <FileText className="w-8 h-8 text-slate-400/40" />
-            <p className="text-xs text-slate-500">No requests yet</p>
+            <p className="text-xs text-slate-500">No proposals tracked yet</p>
+            <p className="text-xs text-slate-400">Create a transfer to start tracking</p>
           </div>
         ) : (
           <div className="space-y-2 overflow-y-auto max-h-[500px] pr-1">
-            {history.map(item => (
+            {timelines.map(t => (
               <button
-                key={item.request.id}
-                onClick={() => setSelected(item)}
+                key={t.proposal_id}
+                onClick={() => setSelected(t)}
                 className={`w-full text-left p-3 rounded-xl border transition-colors ${
-                  selected?.request.id === item.request.id
+                  selected?.proposal_id === t.proposal_id
                     ? 'border-violet-500/50 bg-violet-500/5'
                     : 'border-slate-200 dark:border-white/10 hover:border-violet-500/30'
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <StatusBadge status={item.request.status} />
-                  <span className="text-xs text-slate-400">{timeAgo(item.request.created_at)}</span>
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                    t.executed
+                      ? 'bg-emerald-500/10 text-emerald-400'
+                      : 'bg-amber-500/10 text-amber-400'
+                  }`}>
+                    {t.executed ? '✅ Executed' : '⏳ Pending'}
+                  </span>
+                  <span className="text-xs text-slate-400">#{t.proposal_id}</span>
                 </div>
                 <p className="text-sm font-semibold text-slate-900 dark:text-white mt-1.5">
-                  {parseFloat(item.request.amount).toLocaleString()} XLM
+                  {t.amount_stroops ? (t.amount_stroops / 10000000).toLocaleString() : '—'} XLM
                 </p>
-                <p className="text-xs font-mono text-slate-400 mt-0.5 truncate">{item.request.transfer_id}</p>
+                <p className="text-xs font-mono text-slate-400 mt-0.5 truncate">
+                  {t.recipient_address ? `→ ${t.recipient_address.slice(0, 12)}...` : 'No recipient'}
+                </p>
               </button>
             ))}
           </div>
@@ -424,91 +537,119 @@ function ApprovalTimeline() {
       </BentoCard>
 
       {/* Timeline detail */}
-      <BentoCard delay={0.2} className="xl:col-span-3 flex flex-col p-6">
+      <BentoCard delay={0.2} className="xl:col-span-3 flex flex-col p-6 overflow-y-auto">
         {!selected ? (
           <div className="flex flex-col items-center justify-center h-full py-20 gap-3 text-center">
-            <ChevronRight className="w-8 h-8 text-slate-400/40" />
-            <p className="text-sm text-slate-500">Select a request to view its timeline</p>
+            <Link2 className="w-8 h-8 text-slate-400/40" />
+            <p className="text-sm text-slate-500">Select a proposal to view its blockchain timeline</p>
           </div>
         ) : (
           <div>
+            {/* Header */}
             <div className="flex items-start justify-between mb-6">
               <div>
-                <p className="text-xs font-mono text-slate-400">{selected.request.transfer_id}</p>
+                <p className="text-xs font-mono text-slate-400">Proposal #{selected.proposal_id}</p>
                 <p className="text-2xl font-bold text-slate-900 dark:text-white mt-0.5">
-                  {parseFloat(selected.request.amount).toLocaleString()} XLM
+                  {selected.amount_stroops ? (selected.amount_stroops / 10000000).toLocaleString() : '—'} XLM
                 </p>
-                {selected.request.purpose && (
-                  <p className="text-xs text-slate-500 mt-0.5">"{selected.request.purpose}"</p>
+                {selected.recipient_address && (
+                  <p className="text-xs font-mono text-slate-400 mt-0.5">→ {selected.recipient_address}</p>
                 )}
               </div>
-              <StatusBadge status={selected.request.status} />
+              <span className={`text-xs font-semibold px-3 py-1.5 rounded-full ${
+                selected.executed
+                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                  : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+              }`}>
+                {selected.executed ? '✅ Executed' : '⏳ Pending'}
+              </span>
             </div>
 
-            {/* Stage pipeline */}
-            <div className="flex items-center gap-1 mb-8 overflow-x-auto pb-2">
-              {(selected.request.status === 'REJECTED' || selected.request.status === 'FAILED')
-                ? (
-                  <div className="flex items-center gap-2 text-red-400">
-                    <XCircle className="w-5 h-5" />
-                    <span className="text-sm font-semibold">{selected.request.status}</span>
-                  </div>
-                )
-                : STAGES.map((stage, idx) => {
-                  const current = stageIndex(selected.request.status);
-                  const done = idx <= current;
-                  const active = idx === current;
-                  return (
-                    <React.Fragment key={stage}>
-                      <div className={`flex flex-col items-center gap-1.5 min-w-[70px] ${done ? 'opacity-100' : 'opacity-30'}`}>
-                        <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
-                          active ? 'border-violet-500 bg-violet-500/20 animate-pulse' :
-                          done  ? 'border-emerald-500 bg-emerald-500/20' :
-                          'border-slate-300 dark:border-slate-600'
-                        }`}>
-                          {done && !active ? (
-                            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                          ) : (
-                            <div className={`w-2.5 h-2.5 rounded-full ${active ? 'bg-violet-400' : 'bg-slate-400'}`} />
-                          )}
-                        </div>
-                        <span className="text-[10px] text-center leading-tight text-slate-500 font-medium">
-                          {stage.replace('_', ' ')}
-                        </span>
-                      </div>
-                      {idx < STAGES.length - 1 && (
-                        <div className={`flex-1 h-0.5 rounded-full min-w-[16px] ${idx < current ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-white/10'}`} />
-                      )}
-                    </React.Fragment>
-                  );
-                })
-              }
-            </div>
+            {/* Blockchain Timeline */}
+            <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Blockchain Timeline</h4>
+            <div className="relative pl-6 space-y-4">
+              <div className="absolute left-2 top-0 bottom-0 w-px bg-slate-200 dark:bg-white/10" />
 
-            {/* Action log */}
-            <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Action Log</h4>
-            {selected.actions.length === 0 ? (
-              <p className="text-xs text-slate-400">No actions recorded yet.</p>
-            ) : (
-              <div className="relative pl-6 space-y-3">
-                <div className="absolute left-2 top-0 bottom-0 w-px bg-slate-200 dark:bg-white/10" />
-                {selected.actions.map(action => (
-                  <div key={action.id} className="relative">
-                    <div className="absolute -left-[18px] w-3 h-3 rounded-full bg-white dark:bg-[#110E1C] border-2 border-violet-500 top-1" />
-                    <div className="bg-slate-50 dark:bg-white/5 rounded-lg p-3 border border-slate-200 dark:border-white/10">
-                      <div className="flex items-center justify-between">
-                        <span className={`text-xs font-semibold ${action.action === 'APPROVED' ? 'text-emerald-400' : action.action === 'REJECTED' ? 'text-red-400' : 'text-slate-400'}`}>
-                          {action.action === 'APPROVED' ? '✅' : action.action === 'REJECTED' ? '❌' : '💬'} {action.action}
-                        </span>
-                        <span className="text-[10px] text-slate-400">{timeAgo(action.created_at)}</span>
-                      </div>
-                      <p className="text-xs text-slate-500 mt-1">by {action.actor_id}</p>
-                      {action.comment && <p className="text-xs text-slate-400 mt-1 italic">"{action.comment}"</p>}
-                    </div>
+              {/* Step 1: Proposal Created */}
+              <div className="relative">
+                <div className="absolute -left-[18px] w-3.5 h-3.5 rounded-full bg-white dark:bg-[#110E1C] border-2 border-violet-500 top-1" />
+                <div className="bg-slate-50 dark:bg-white/5 rounded-xl p-4 border border-slate-200 dark:border-white/10">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold text-violet-400">📋 Proposal Created</span>
+                    <span className="text-[10px] text-slate-400">{selected.created_at ? new Date(selected.created_at).toLocaleString() : ''}</span>
                   </div>
-                ))}
+                  {selected.creation_hash ? (
+                    <TxLink hash={selected.creation_hash} label="View creation transaction →" />
+                  ) : (
+                    <span className="text-xs text-slate-400 italic">Hash not yet recorded</span>
+                  )}
+                  {selected.proposer_address && (
+                    <p className="text-xs text-slate-400 mt-1.5">by {selected.proposer_address.slice(0, 12)}...{selected.proposer_address.slice(-6)}</p>
+                  )}
+                </div>
               </div>
-            )}
+
+              {/* Approval Steps */}
+              {selected.approvals.map(step => (
+                <div key={step.step_number} className="relative">
+                  <div className="absolute -left-[18px] w-3.5 h-3.5 rounded-full bg-white dark:bg-[#110E1C] border-2 border-blue-500 top-1" />
+                  <div className="bg-slate-50 dark:bg-white/5 rounded-xl p-4 border border-slate-200 dark:border-white/10">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-semibold text-blue-400">✅ Approval #{step.step_number}</span>
+                      <span className="text-[10px] text-slate-400">{new Date(step.signed_at).toLocaleString()}</span>
+                    </div>
+                    <TxLink hash={step.tx_hash} label={`View approval #${step.step_number} transaction →`} />
+                    <p className="text-xs text-slate-400 mt-1.5">
+                      signed by {step.signer_address.slice(0, 12)}...{step.signer_address.slice(-6)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+
+              {/* Execution + Vault Breakdown */}
+              {selected.executed && selected.execution_hash && (
+                <div className="relative">
+                  <div className="absolute -left-[18px] w-3.5 h-3.5 rounded-full bg-white dark:bg-[#110E1C] border-2 border-emerald-500 top-1" />
+                  <div className="bg-emerald-500/5 rounded-xl p-4 border border-emerald-500/20">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-semibold text-emerald-400">🚀 Executed & Payout Complete</span>
+                    </div>
+                    <TxLink hash={selected.execution_hash} label="View execution transaction →" />
+
+                    {/* Vault Breakdown */}
+                    {selected.vault_breakdown && selected.vault_breakdown.length > 0 && (
+                      <div className="mt-3 space-y-2">
+                        <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Vault Contributions</p>
+                        {selected.vault_breakdown.map((v: any, i: number) => (
+                          <div key={i} className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                              <span className="text-xs text-slate-400">{v.vault_name || `${v.vault_address?.slice(0,8)}...`}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-semibold text-slate-300">
+                                {v.amount_stroops ? (v.amount_stroops / 10000000).toLocaleString(undefined, {maximumFractionDigits: 4}) : '—'} XLM
+                              </span>
+                              <TxLink hash={selected.execution_hash!} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Pending indicator */}
+              {!selected.executed && (
+                <div className="relative">
+                  <div className="absolute -left-[18px] w-3.5 h-3.5 rounded-full bg-white dark:bg-[#110E1C] border-2 border-amber-500/50 border-dashed top-1" />
+                  <div className="bg-amber-500/5 rounded-xl p-3 border border-amber-500/20 border-dashed">
+                    <span className="text-xs text-amber-400/70">⏳ Awaiting {selected.required_approvals - selected.approvals.length} more approval(s)...</span>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </BentoCard>

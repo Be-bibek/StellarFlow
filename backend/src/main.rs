@@ -48,6 +48,9 @@ use crate::{
         funding::{
             fund_via_friendbot, fund_manual, get_funding_history,
         },
+        soroban_proposals::{
+            create_proposal, add_approval, mark_executed, list_proposals, get_proposal,
+        },
     },
     streaming::transit_engine::{soroban_event_poller, ws_gateway_handler},
 };
@@ -163,6 +166,14 @@ async fn main() -> anyhow::Result<()> {
         tracing::info!("Phase F funding migration applied successfully.");
     }
 
+    // ── Phase G: Run soroban proposals timeline migration ─────────────────────
+    let migration_g_sql = include_str!("database/migration_g.sql");
+    if let Err(e) = sqlx::raw_sql(migration_g_sql).execute(&db_pool).await {
+        tracing::warn!(error = %e, "Phase G migration warning (may already be applied)");
+    } else {
+        tracing::info!("Phase G soroban timeline migration applied successfully.");
+    }
+
     crate::database::seed::seed_database(&db_pool, &cfg.aes_encryption_key)
         .await
         .expect("Failed to seed database");
@@ -250,7 +261,12 @@ async fn main() -> anyhow::Result<()> {
         // Phase F — Funding Center
         .route("/funding/friendbot",              post(fund_via_friendbot))
         .route("/funding/manual",                 post(fund_manual))
-        .route("/funding/history",                get(get_funding_history));
+        .route("/funding/history",                get(get_funding_history))
+        // Phase G — Soroban Proposal Timeline
+        .route("/soroban/proposals",              get(list_proposals).post(create_proposal))
+        .route("/soroban/proposals/:id",          get(get_proposal))
+        .route("/soroban/proposals/:id/approvals", post(add_approval))
+        .route("/soroban/proposals/:id/execute",  post(mark_executed).put(mark_executed));
 
     let app = Router::new()
         // REST API namespace

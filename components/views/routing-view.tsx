@@ -143,6 +143,22 @@ export function RoutingView({ onNavigate }: { onNavigate?: (view: any) => void }
         createdAt: new Date().toISOString(),
       });
 
+      // ── Record creation hash in DB (fire-and-forget, non-blocking) ─────────
+      if (response.proposalId && response.hash) {
+        fetch('/api/soroban/proposals', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            proposal_id:        response.proposalId,
+            creation_hash:      response.hash,
+            proposer_address:   wallet.publicKey,
+            recipient_address:  destination.trim(),
+            amount_stroops:     Math.floor(amount * 10000000),
+            required_approvals: reqApprovals,
+          }),
+        }).catch(err => console.warn('Failed to record proposal creation hash:', err));
+      }
+
       // Wait for ledger
       await new Promise(r => setTimeout(r, 4000));
       

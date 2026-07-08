@@ -18,6 +18,33 @@ import { BentoCard } from '@/components/ui/bento-card';
 // ─────────────────────────────────────────────────────────────────────────────
 type FilterPill = 'All' | 'Live' | 'Settled' | 'Failed';
 
+interface ProposalTimelineRecord {
+  proposal_id: number;
+  creation_hash: string | null;
+  proposer_address: string | null;
+  recipient_address: string | null;
+  amount_stroops: number | null;
+  required_approvals: number;
+  executed: boolean;
+  execution_hash: string | null;
+  vault_breakdown: any[];
+  approvals: any[];
+  created_at: string;
+}
+
+const SOROBAN_API = '/api/soroban';
+
+async function fetchProposalTimelines(): Promise<ProposalTimelineRecord[]> {
+  try {
+    const res = await fetch(`${SOROBAN_API}/proposals`);
+    if (!res.ok) return [];
+    return await res.json();
+  } catch {
+    return [];
+  }
+}
+
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Status config
 // ─────────────────────────────────────────────────────────────────────────────
@@ -313,9 +340,33 @@ function StatsStrip({ txs }: { txs: StellarTransaction[] }) {
 export function HistoryView() {
   const [search, setSearch]     = useState('');
   const [filter, setFilter]     = useState<FilterPill>('All');
+  const [onChainTxs, setOnChainTxs] = React.useState<StellarTransaction[]>([]);
   const transactions            = useTransactionStore((s) => s.transactions);
   const activePipeline          = useTransactionStore((s) => s.activePipeline);
   const pipelineIsRunning       = useTransactionStore((s) => s.pipelineIsRunning);
+
+  React.useEffect(() => {
+    fetchProposalTimelines().then(data => {
+      const mapped: StellarTransaction[] = data.map(p => ({
+        id: `onchain-${p.proposal_id}`,
+        transferId: `ONCHAIN-PROP-${p.proposal_id}`,
+        orgId: 'org-1',
+        amount: (p.amount_stroops || 0) / 10000000,
+        assetCode: 'native',
+        destination: p.recipient_address || 'Unknown',
+        sourceBreakdown: (p.vault_breakdown || []).reduce((acc: any, v: any) => {
+          acc[v.vault_address || v.vault_name || 'Unknown'] = ((v.amount_stroops || 0) / 10000000).toString();
+          return acc;
+        }, {}),
+        status: p.executed ? 'SETTLED' : 'AUTHORIZING',
+        stellarTxHash: (p.executed ? p.execution_hash : p.creation_hash) || undefined,
+        recipientCount: 1,
+        createdAt: p.created_at,
+        settledAt: p.executed ? p.created_at : undefined,
+      }));
+      setOnChainTxs(mapped);
+    });
+  }, []);
 
   // If there's a live pipeline, prepend its transaction to the list
   const allTxs = useMemo(() => {
@@ -336,8 +387,22 @@ export function HistoryView() {
       recipientCount: 1,
       createdAt: new Date().toISOString(),
     };
-    return [liveTx, ...transactions];
-  }, [transactions, activePipeline]);
+    
+    // Combine local transactions, onchain transactions, and deduplicate by transferId
+    const all = [liveTx, ...transactions, ...onChainTxs].filter(Boolean) as StellarTransaction[];
+    const map = new Map<string, StellarTransaction>();
+    for (const t of all) {
+      if (!map.has(t.transferId)) {
+        map.set(t.transferId, t);
+      } else if (t.status === 'SETTLED') {
+         // Prefer SETTLED status if duplicate
+         map.set(t.transferId, t);
+      }
+    }
+    
+    // Sort by created_at descending
+    return Array.from(map.values()).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [transactions, activePipeline, onChainTxs]);
 
   const filtered = useMemo(() => {
     return allTxs.filter((tx) => {

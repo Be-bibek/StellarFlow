@@ -443,8 +443,16 @@ export async function fetchAllOnChainProposals(): Promise<any[]> {
     const contract = new Contract(CONTRACT_ID);
     
     // 1. Get the highest proposal ID currently on-chain
+    let sourceAccount;
+    try {
+      sourceAccount = await SOROBAN_SERVER.getAccount(process.env.NEXT_PUBLIC_DEPLOYER_PUBLIC_KEY ?? "");
+    } catch (err: any) {
+      console.warn("Deployer account not found (testnet reset?):", err.message);
+      return [];
+    }
+
     const nextIdTx = await SOROBAN_SERVER.simulateTransaction(
-      new TransactionBuilder(await SOROBAN_SERVER.getAccount(process.env.NEXT_PUBLIC_DEPLOYER_PUBLIC_KEY ?? ""), { fee: "100", networkPassphrase: NETWORK_PASSPHRASE })
+      new TransactionBuilder(sourceAccount, { fee: "100", networkPassphrase: NETWORK_PASSPHRASE })
         .addOperation(contract.call("get_proposal_counter"))
         .setTimeout(30).build()
     );
@@ -456,7 +464,7 @@ export async function fetchAllOnChainProposals(): Promise<any[]> {
     for (let id = 1; id <= maxId; id++) {
       proposalPromises.push(
         SOROBAN_SERVER.simulateTransaction(
-          new TransactionBuilder(await SOROBAN_SERVER.getAccount(process.env.NEXT_PUBLIC_DEPLOYER_PUBLIC_KEY ?? ""), { fee: "100", networkPassphrase: NETWORK_PASSPHRASE })
+          new TransactionBuilder(sourceAccount, { fee: "100", networkPassphrase: NETWORK_PASSPHRASE })
             .addOperation(contract.call("get_proposal", nativeToScVal(id, { type: "u32" })))
             .setTimeout(30).build()
         )
@@ -477,7 +485,7 @@ export async function fetchAllOnChainProposals(): Promise<any[]> {
         // The Proposal struct maps to JS object
         return { id, ...val };
       })
-      .filter(p => p !== null && !p.executed);
+      .filter(p => p !== null);
   } catch (error) {
     console.error("Failed to read decentralized governance state:", error);
     return [];
