@@ -216,6 +216,23 @@ pub async fn mark_executed(
     .await
     .map_err(|e| AppError::Database(e))?;
 
+    // Also update the global transactions table so the history view instantly shows it as SETTLED
+    let transfer_id = format!("ONCHAIN-PROP-{}", proposal_id);
+    sqlx::query(
+        r#"
+        UPDATE transactions
+        SET status = 'SETTLED',
+            stellar_tx_hash = $1,
+            settled_at = NOW()
+        WHERE transfer_id = $2
+        "#,
+    )
+    .bind(&body.execution_hash)
+    .bind(&transfer_id)
+    .execute(&state.db)
+    .await
+    .map_err(|e| AppError::Database(e))?;
+
     tracing::info!(
         proposal_id,
         execution_hash = %body.execution_hash,
