@@ -432,28 +432,33 @@ export function HistoryView() {
 
   // If there's a live pipeline, prepend its transaction to the list
   const allTxs = useMemo(() => {
-    if (!activePipeline) return transactions;
-    const already = transactions.find((t) => t.transferId === activePipeline.transferId);
-    if (already) return transactions;
-    const liveTx: StellarTransaction = {
-      id: `live-${activePipeline.transferId}`,
-      transferId: activePipeline.transferId,
-      orgId: 'org-1',
-      amount: 0,
-      assetCode: 'native',
-      destination: activePipeline.routingBreakdown
-        ? Object.keys(activePipeline.routingBreakdown)[0] ?? 'Multiple'
-        : 'Multiple',
-      sourceBreakdown: activePipeline.routingBreakdown ?? {},
-      status: activePipeline.currentStage,
-      recipientCount: 1,
-      createdAt: new Date().toISOString(),
-    };
+    const all = [...transactions, ...onChainTxs];
+
+    if (activePipeline) {
+      const already = transactions.find((t) => t.transferId === activePipeline.transferId);
+      if (!already) {
+        const liveTx: StellarTransaction = {
+          id: `live-${activePipeline.transferId}`,
+          transferId: activePipeline.transferId,
+          orgId: 'org-1',
+          amount: 0,
+          assetCode: 'native',
+          destination: activePipeline.routingBreakdown
+            ? Object.keys(activePipeline.routingBreakdown)[0] ?? 'Multiple'
+            : 'Multiple',
+          sourceBreakdown: activePipeline.routingBreakdown ?? {},
+          status: activePipeline.currentStage,
+          recipientCount: 1,
+          createdAt: new Date().toISOString(),
+        };
+        all.unshift(liveTx);
+      }
+    }
     
     // Combine local transactions, onchain transactions, and deduplicate by transferId
-    const all = [liveTx, ...transactions, ...onChainTxs].filter(Boolean) as StellarTransaction[];
+    const validAll = all.filter(Boolean) as StellarTransaction[];
     const map = new Map<string, StellarTransaction>();
-    for (const t of all) {
+    for (const t of validAll) {
       if (!map.has(t.transferId)) {
         map.set(t.transferId, t);
       } else if (t.status === 'SETTLED') {
