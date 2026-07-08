@@ -136,7 +136,7 @@ pub async fn log_transaction(
     .bind(&payload.asset_code)
     .bind(&payload.destination)
     .bind(&payload.source_breakdown)
-    .bind(&payload.status.to_lowercase())
+    .bind(&payload.status.to_uppercase())
     .bind(&payload.stellar_tx_hash)
     .execute(&state.db)
     .await?;
