@@ -101,13 +101,13 @@ export function TransferView() {
         </div>
 
         {/* Right Side: Transfer Form with LaserFlow */}
-        <div className="flex-1 w-full min-w-0 relative h-[750px]">
+        <div className="flex-1 w-full min-w-0 relative h-[600px]">
           {/* LaserFlow Background - Transparent and blending with global app background */}
           <div className="absolute inset-0 z-0 opacity-100 mix-blend-screen pointer-events-none">
             <LaserFlow 
               color="#a855f7" 
               horizontalBeamOffset={0.0} 
-              verticalBeamOffset={0.05} // Origin at ~45% from the top
+              verticalBeamOffset={0.25} // Origin at ~25% from the top
               fogIntensity={2.5} 
               wispDensity={3.0}
               wispSpeed={20}
@@ -116,7 +116,7 @@ export function TransferView() {
           </div>
           
           {/* Transfer Form Box positioned so its top edge aligns with the laser origin */}
-          <div className="absolute left-0 right-0 top-[45%] z-10">
+          <div className="absolute left-0 right-0 top-[25%] z-10">
             <TreasuryRouter 
               walletKey={walletKey} 
               balance={balance} 
