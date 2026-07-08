@@ -151,7 +151,7 @@ export function RoutingView({ onNavigate }: { onNavigate?: (view: any) => void }
           body: JSON.stringify({
             proposal_id:        response.proposalId,
             creation_hash:      response.hash,
-            proposer_address:   wallet.publicKey,
+            proposer_address:   wallet,
             recipient_address:  destination.trim(),
             amount_stroops:     Math.floor(amount * 10000000),
             required_approvals: reqApprovals,
