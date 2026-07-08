@@ -55,7 +55,7 @@ export function TransferView() {
       icon: getWalletIcon(w.type),
       colorFrom: colors.colorFrom,
       colorTo: colors.colorTo,
-      cardType: w.type === 'MASTER' ? 'CREDIT' : 'DEBIT' as 'DEBIT' | 'CREDIT',
+      cardType: w.type === 'MASTER' ? 'MULTI-SIG' : 'STANDARD',
       cardNumber: formattedCardNumber,
     };
   });

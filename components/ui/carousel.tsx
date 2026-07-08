@@ -10,7 +10,7 @@ export interface CarouselItem {
   icon: React.ReactNode;
   colorFrom?: string;
   colorTo?: string;
-  cardType?: 'DEBIT' | 'CREDIT';
+  cardType?: string;
   cardNumber?: string;
 }
 
