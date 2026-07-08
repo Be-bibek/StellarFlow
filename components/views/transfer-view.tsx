@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { TreasuryRouter } from '@/components/treasury-router';
 import { ArrowRightLeft, Landmark, Users, Briefcase, Lock, Megaphone, Wallet } from 'lucide-react';
 import Carousel from '@/components/ui/carousel';
+import LaserFlow from '@/components/ui/laser-flow';
 import { useTreasuryStore } from '@/lib/stores/treasury-store';
 import { useAccountStore } from '@/lib/stores/account-store';
 
@@ -72,7 +73,7 @@ export function TransferView() {
   };
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto h-full overflow-y-auto pb-20 p-6">
+    <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto h-full overflow-y-auto overflow-x-hidden pb-20 p-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-2">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-[#F8FAFC] flex items-center gap-3">
@@ -99,15 +100,20 @@ export function TransferView() {
           </div>
         </div>
 
-        {/* Right Side: Transfer Form */}
-        <div className="flex-1 w-full min-w-0">
-          <TreasuryRouter 
-            walletKey={walletKey} 
-            balance={balance} 
-            maxLimit={maxLimit} 
-            onConnect={handleConnect} 
-            onDisconnect={handleDisconnect}
-          />
+        {/* Right Side: Transfer Form with LaserFlow Background */}
+        <div className="flex-1 w-full min-w-0 relative flex items-center justify-center min-h-[500px]">
+          <div className="absolute inset-0 z-0 opacity-100 pointer-events-none mix-blend-screen" style={{ transform: 'scale(1.2)', transformOrigin: 'bottom center' }}>
+            <LaserFlow color="#a855f7" />
+          </div>
+          <div className="relative z-10 w-full p-4 lg:p-8">
+            <TreasuryRouter 
+              walletKey={walletKey} 
+              balance={balance} 
+              maxLimit={maxLimit} 
+              onConnect={handleConnect} 
+              onDisconnect={handleDisconnect}
+            />
+          </div>
         </div>
       </div>
     </div>
