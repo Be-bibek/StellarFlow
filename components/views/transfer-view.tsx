@@ -8,7 +8,7 @@ export function TransferView() {
   const [balance, setBalance] = useState<string | null>("0");
   const [maxLimit, setMaxLimit] = useState<bigint | null>(BigInt(50000));
 
-  const handleConnect = () => {
+  const handleConnect = async () => {
     setWalletKey('GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX');
     setBalance("150000");
     setMaxLimit(250000n);
