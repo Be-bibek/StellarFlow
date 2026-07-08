@@ -363,12 +363,6 @@ export default function AppShell() {
               </div>
               <span className="text-xl font-bold tracking-widest text-slate-900 dark:text-white uppercase drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]">StellarFlow</span>
             </div>
-            <button 
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="relative p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-white/10 transition-colors flex-shrink-0"
-            >
-                {theme === 'dark' ? <Sun className="w-4 h-4 text-yellow-500" /> : <Moon className="w-4 h-4 text-cyan-500" />}
-            </button>
           </div>
 
           {/* Account Widget */}
@@ -522,14 +516,14 @@ export default function AppShell() {
               </div>
             </div>
             
-            <button 
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="lg:hidden relative p-2 rounded-full hover:bg-slate-200 dark:hover:bg-white/10 transition-colors flex-shrink-0"
-            >
-                {theme === 'dark' ? <Sun className="w-5 h-5 text-yellow-500" /> : <Moon className="w-5 h-5 text-blue-500 dark:text-indigo-500" />}
-            </button>
-
             <div className="flex items-center gap-4 sm:border-l border-slate-200 dark:border-white/10 sm:pl-6 transition-colors">
+              <button 
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className="relative p-2 rounded-full hover:bg-slate-200 dark:hover:bg-white/10 transition-colors flex-shrink-0"
+              >
+                  {theme === 'dark' ? <Sun className="w-5 h-5 text-yellow-500" /> : <Moon className="w-5 h-5 text-blue-500 dark:text-indigo-500" />}
+              </button>
+
               <button 
                 onClick={() => setShowNotifications(!showNotifications)}
                 className="relative p-2 rounded-full hover:text-blue-600 dark:text-indigo-600 dark:hover:text-white text-slate-500 dark:text-slate-400 transition"

@@ -3,10 +3,22 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BentoCard } from '@/components/ui/bento-card';
-import { ArrowUpRight, ArrowDownRight, Activity, Shield, MoreHorizontal, ExternalLink, ArrowRightLeft, QrCode, Copy, Share2, Clock } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Activity, Shield, MoreHorizontal, ExternalLink, ArrowRightLeft, QrCode, Copy, Share2, Clock, Wallet, Landmark, Users, Briefcase, Lock, Megaphone } from 'lucide-react';
 import { QRCodeSVG as QRCode } from 'qrcode.react';
 import { useTreasuryStore } from '@/lib/stores/treasury-store';
 import { useTransactionStore } from '@/lib/stores/transaction-store';
+import { useAccountStore } from '@/lib/stores/account-store';
+
+const getWalletIcon = (type: string) => {
+  switch (type) {
+    case 'MASTER': return <Landmark className="w-5 h-5 text-indigo-400" />;
+    case 'PAYROLL': return <Users className="w-5 h-5 text-blue-400" />;
+    case 'OPERATIONS': return <Briefcase className="w-5 h-5 text-emerald-400" />;
+    case 'RESERVE': return <Lock className="w-5 h-5 text-amber-400" />;
+    case 'MARKETING': return <Megaphone className="w-5 h-5 text-pink-400" />;
+    default: return <Wallet className="w-5 h-5 text-slate-400" />;
+  }
+};
 
 interface DashboardViewProps {
   onNavigate?: (view: any) => void;
@@ -15,6 +27,8 @@ interface DashboardViewProps {
 export function DashboardView({ onNavigate }: DashboardViewProps) {
   const [qrModalWallet, setQrModalWallet] = useState<any | null>(null);
   const [copyToast, setCopyToast] = useState(false);
+  
+  const xlmPriceUsd = useAccountStore((s) => s.xlmPriceUsd);
   
   const wallets = useTreasuryStore((s) => s.wallets);
   const totalBalance = useTreasuryStore((s) => s.totalBalance);
@@ -95,17 +109,19 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Managed Sub-Wallets */}
         <div className="col-span-1 lg:col-span-2 flex flex-col gap-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-800 dark:text-[#F8FAFC]">Managed Sub-Wallets</h2>
-          <div className="flex flex-col gap-3">
-            {wallets.map((wallet, i) => (
-                <BentoCard 
-                  key={wallet.id} 
-                  delay={0.2 + (i * 0.05)} 
-                  noPadding
-                  className="flex flex-col overflow-hidden hover:border-blue-500/30 transition-colors"
-                >
-                  <div className="flex justify-between items-center p-4 bg-slate-50 dark:bg-white/[0.02]">
+          <h2 className="text-sm font-semibold uppercase tracking-wider flex items-center gap-2 text-slate-800 dark:text-[#F8FAFC]">
+            <Wallet className="w-4 h-4 text-blue-500 dark:text-indigo-400" />
+            Managed Sub-Wallets
+          </h2>
+          <BentoCard delay={0.2} className="flex-1 overflow-hidden p-0" noPadding>
+            <div className="flex flex-col divide-y divide-slate-200 dark:divide-white/5 h-[400px] overflow-y-auto">
+              {wallets.map((wallet, i) => (
+                <div key={wallet.id} className="flex flex-col flex-shrink-0 overflow-hidden hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+                  <div className="flex justify-between items-center p-4 bg-transparent">
                     <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center border border-slate-200 dark:border-white/10 flex-shrink-0">
+                        {getWalletIcon(wallet.type)}
+                      </div>
                       <div className="flex flex-col">
                         <div className="flex items-center gap-2">
                           <h3 className="text-xs font-bold text-slate-900 dark:text-[#F8FAFC] uppercase">{wallet.name}</h3>
@@ -118,79 +134,83 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
                     </div>
                     
                     <div className="flex items-center gap-4 text-right">
-                      <div className="text-lg font-bold text-slate-900 dark:text-[#F8FAFC]">
-                        {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(wallet.balance)}
+                      <div className="flex flex-col items-end">
+                        <div className="text-lg font-bold text-slate-900 dark:text-[#F8FAFC] flex items-baseline gap-1">
+                          {new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(wallet.balance)} <span className="text-xs text-slate-500 font-medium">XLM</span>
+                        </div>
+                        <div className="text-xs font-medium text-slate-500 mt-0.5">
+                          {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(wallet.balance * (xlmPriceUsd || 0.125))}
+                        </div>
                       </div>
                       <div className={`w-2 h-2 rounded-full flex-shrink-0 ${wallet.isActive ? 'bg-emerald-500' : 'bg-amber-500'} shadow-[0_0_8px_currentColor]`} />
                     </div>
                   </div>
 
-                  <div className="border-t border-slate-200 dark:border-white/5 bg-white dark:bg-[#0B0F19]">
-                    <div className="p-4 flex flex-wrap gap-2">
-                      <button 
-                        onClick={() => {
-                          if (wallet.publicKey) window.open(`https://stellar.expert/explorer/testnet/account/${wallet.publicKey}`, '_blank');
-                        }}
-                        className="flex-1 min-w-[120px] flex items-center justify-center gap-2 py-2 px-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg text-xs font-semibold text-slate-700 dark:text-[#F8FAFC] transition"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" /> View
-                      </button>
-                      
-                      <button 
-                        onClick={() => {
-                          onNavigate?.('transfer');
-                        }}
-                        className="flex-1 min-w-[120px] flex items-center justify-center gap-2 py-2 px-3 bg-blue-600/10 dark:bg-indigo-600/20 hover:bg-blue-600/20 dark:hover:bg-blue-600/40 border border-blue-500/30 text-blue-600 dark:text-indigo-300 rounded-lg text-xs font-semibold transition"
-                      >
-                        <ArrowRightLeft className="w-3.5 h-3.5" /> Transfer
-                      </button>
-                      
-                      <button 
-                        onClick={() => {
-                          setQrModalWallet(wallet);
-                        }}
-                        className="flex-1 min-w-[120px] flex items-center justify-center gap-2 py-2 px-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg text-xs font-semibold text-slate-700 dark:text-[#F8FAFC] transition"
-                      >
-                        <QrCode className="w-3.5 h-3.5" /> Receive
-                      </button>
-                      
-                      <button 
-                        onClick={() => {
-                          if (wallet.publicKey) {
-                            navigator.clipboard.writeText(wallet.publicKey);
-                            setCopyToast(true);
-                            setTimeout(() => setCopyToast(false), 2000);
+                  <div className="px-4 pb-4 flex flex-wrap gap-2">
+                    <button 
+                      onClick={() => {
+                        if (wallet.publicKey) window.open(`https://stellar.expert/explorer/testnet/account/${wallet.publicKey}`, '_blank');
+                      }}
+                      className="flex-1 min-w-[120px] flex items-center justify-center gap-2 py-2 px-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg text-xs font-semibold text-slate-700 dark:text-[#F8FAFC] transition"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" /> View
+                    </button>
+                    
+                    <button 
+                      onClick={() => {
+                        onNavigate?.('transfer');
+                      }}
+                      className="flex-1 min-w-[120px] flex items-center justify-center gap-2 py-2 px-3 bg-blue-600/10 dark:bg-indigo-600/20 hover:bg-blue-600/20 dark:hover:bg-blue-600/40 border border-blue-500/30 text-blue-600 dark:text-indigo-300 rounded-lg text-xs font-semibold transition"
+                    >
+                      <ArrowRightLeft className="w-3.5 h-3.5" /> Transfer
+                    </button>
+                    
+                    <button 
+                      onClick={() => {
+                        setQrModalWallet(wallet);
+                      }}
+                      className="flex-1 min-w-[120px] flex items-center justify-center gap-2 py-2 px-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg text-xs font-semibold text-slate-700 dark:text-[#F8FAFC] transition"
+                    >
+                      <QrCode className="w-3.5 h-3.5" /> Receive
+                    </button>
+                    
+                    <button 
+                      onClick={() => {
+                        if (wallet.publicKey) {
+                          navigator.clipboard.writeText(wallet.publicKey);
+                          setCopyToast(true);
+                          setTimeout(() => setCopyToast(false), 2000);
+                        }
+                      }}
+                      className="flex-1 min-w-[120px] flex items-center justify-center gap-2 py-2 px-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg text-xs font-semibold text-slate-700 dark:text-[#F8FAFC] transition"
+                    >
+                      <Copy className="w-3.5 h-3.5" /> Copy
+                    </button>
+                    
+                    <button 
+                      onClick={async () => {
+                        if (wallet.publicKey && navigator.share) {
+                          try {
+                            await navigator.share({
+                              title: `My Stellar Address (${wallet.name})`,
+                              text: `Send XLM to my address: ${wallet.publicKey}`,
+                            });
+                          } catch (err) {
+                            console.log('Share canceled or failed');
                           }
-                        }}
-                        className="flex-1 min-w-[120px] flex items-center justify-center gap-2 py-2 px-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg text-xs font-semibold text-slate-700 dark:text-[#F8FAFC] transition"
-                      >
-                        <Copy className="w-3.5 h-3.5" /> Copy
-                      </button>
-                      
-                      <button 
-                        onClick={async () => {
-                          if (wallet.publicKey && navigator.share) {
-                            try {
-                              await navigator.share({
-                                title: `My Stellar Address (${wallet.name})`,
-                                text: `Send XLM to my address: ${wallet.publicKey}`,
-                              });
-                            } catch (err) {
-                              console.log('Share canceled or failed');
-                            }
-                          } else {
-                            alert('Web Share API not supported on this browser.');
-                          }
-                        }}
-                        className="flex-1 min-w-[120px] flex items-center justify-center gap-2 py-2 px-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg text-xs font-semibold text-slate-700 dark:text-[#F8FAFC] transition"
-                      >
-                        <Share2 className="w-3.5 h-3.5" /> Share
-                      </button>
-                    </div>
+                        } else {
+                          alert('Web Share API not supported on this browser.');
+                        }
+                      }}
+                      className="flex-1 min-w-[120px] flex items-center justify-center gap-2 py-2 px-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-lg text-xs font-semibold text-slate-700 dark:text-[#F8FAFC] transition"
+                    >
+                      <Share2 className="w-3.5 h-3.5" /> Share
+                    </button>
                   </div>
-                </BentoCard>
-            ))}
-          </div>
+                </div>
+              ))}
+            </div>
+          </BentoCard>
         </div>
 
         {/* Live Activity Feed */}
