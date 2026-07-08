@@ -221,7 +221,7 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
   fetchTransactions: async () => {
     set({ isLoading: true });
     try {
-      const res = await fetch('/api/transactions');
+      const res = await fetch(`/api/transactions?_t=${Date.now()}`);
       if (!res.ok) throw new Error('Failed to fetch transactions');
       const data = await res.json();
       

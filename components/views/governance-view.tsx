@@ -468,11 +468,17 @@ function ApprovalTimeline() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const data = await fetchProposalTimelines();
-    setTimelines(data);
-    if (data.length > 0 && !selected) setSelected(data[0]);
+    try {
+      const res = await fetch(`${SOROBAN_API}/proposals?_t=${Date.now()}`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setTimelines(data);
+      if (data.length > 0 && !selected) setSelected(data[0]);
+    } catch {
+      // ignore
+    }
     setLoading(false);
-  }, []);
+  }, [selected]);
 
   useEffect(() => { load(); }, [load]);
 

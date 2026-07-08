@@ -36,7 +36,7 @@ const SOROBAN_API = '/api/soroban';
 
 async function fetchProposalTimelines(): Promise<ProposalTimelineRecord[]> {
   try {
-    const res = await fetch(`${SOROBAN_API}/proposals`);
+    const res = await fetch(`${SOROBAN_API}/proposals?_t=${Date.now()}`);
     if (!res.ok) return [];
     return await res.json();
   } catch {
@@ -89,7 +89,7 @@ function TxTypeIcon({ tx }: { tx: StellarTransaction }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Transaction row card — premium interactive
 // ─────────────────────────────────────────────────────────────────────────────
-function TxRowCard({ tx, index }: { tx: StellarTransaction; index: number }) {
+function TxRowCard({ tx, index, timelines }: { tx: StellarTransaction; index: number; timelines: ProposalTimelineRecord[] }) {
   const [isPressed, setIsPressed] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
@@ -112,6 +112,11 @@ function TxRowCard({ tx, index }: { tx: StellarTransaction; index: number }) {
     : `${Math.floor(elapsedSec / 3600)}h ago`;
 
   const breakdownEntries = Object.entries(tx.sourceBreakdown || {});
+  
+  // Find timeline if this is an on-chain proposal
+  const timelineIdMatch = tx.transferId.match(/ONCHAIN-PROP-(\d+)/);
+  const timelineId = timelineIdMatch ? parseInt(timelineIdMatch[1], 10) : null;
+  const timeline = timelineId ? timelines.find(t => t.proposal_id === timelineId) : null;
 
   return (
     <BentoCard
@@ -264,8 +269,61 @@ function TxRowCard({ tx, index }: { tx: StellarTransaction; index: number }) {
                 </div>
               ))}
 
+              {/* Multi-Sig Execution Timeline */}
+              {timeline && (
+                <div className="col-span-2 mb-1 mt-2 pt-2 border-t border-slate-200 dark:border-white/10">
+                  <p className="text-[9px] uppercase tracking-widest font-mono mb-3 text-slate-500 dark:text-white/30">
+                    Multi-Sig Execution Timeline
+                  </p>
+                  <div className="relative pl-5 space-y-3">
+                    <div className="absolute left-[7px] top-1 bottom-1 w-px bg-slate-200 dark:bg-white/10" />
+                    
+                    {/* Step 1: Proposal Created */}
+                    <div className="relative">
+                      <div className="absolute -left-[20px] w-2.5 h-2.5 rounded-full bg-white dark:bg-[#110E1C] border-2 border-violet-500 top-1" />
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[10px] font-semibold text-violet-400">📝 Proposal Created</span>
+                        {timeline.creation_hash ? (
+                          <a href={`https://stellar.expert/explorer/testnet/tx/${timeline.creation_hash}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-[10px] font-mono text-blue-600 dark:text-blue-400 hover:underline">
+                            <ExternalLink className="w-2.5 h-2.5" /> {timeline.creation_hash.slice(0,12)}...
+                          </a>
+                        ) : (
+                          <span className="text-[10px] text-slate-400 italic">Hash not recorded</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Approval Steps */}
+                    {timeline.approvals.map(step => (
+                      <div key={step.step_number} className="relative">
+                        <div className="absolute -left-[20px] w-2.5 h-2.5 rounded-full bg-white dark:bg-[#110E1C] border-2 border-blue-500 top-1" />
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[10px] font-semibold text-blue-400">✅ Approval #{step.step_number}</span>
+                          <a href={`https://stellar.expert/explorer/testnet/tx/${step.tx_hash}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-[10px] font-mono text-blue-600 dark:text-blue-400 hover:underline">
+                            <ExternalLink className="w-2.5 h-2.5" /> {step.tx_hash.slice(0,12)}...
+                          </a>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Execution */}
+                    {timeline.executed && timeline.execution_hash && (
+                      <div className="relative">
+                        <div className="absolute -left-[20px] w-2.5 h-2.5 rounded-full bg-white dark:bg-[#110E1C] border-2 border-emerald-500 top-1" />
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[10px] font-semibold text-emerald-400">🚀 Executed & Payout Complete</span>
+                          <a href={`https://stellar.expert/explorer/testnet/tx/${timeline.execution_hash}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-[10px] font-mono text-blue-600 dark:text-blue-400 hover:underline">
+                            <ExternalLink className="w-2.5 h-2.5" /> {timeline.execution_hash.slice(0,12)}...
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* View on Stellar Expert — shows whenever backend returns a real tx hash */}
-              {tx.stellarTxHash && (
+              {!timeline && tx.stellarTxHash && (
                 <div className="col-span-2 pt-2 mt-1 border-t border-slate-200 dark:border-white/10">
                   <a
                     href={`https://stellar.expert/explorer/testnet/tx/${tx.stellarTxHash}`}
@@ -340,6 +398,7 @@ function StatsStrip({ txs }: { txs: StellarTransaction[] }) {
 export function HistoryView() {
   const [search, setSearch]     = useState('');
   const [filter, setFilter]     = useState<FilterPill>('All');
+  const [timelines, setTimelines] = useState<ProposalTimelineRecord[]>([]);
   const [onChainTxs, setOnChainTxs] = React.useState<StellarTransaction[]>([]);
   const transactions            = useTransactionStore((s) => s.transactions);
   const activePipeline          = useTransactionStore((s) => s.activePipeline);
@@ -347,6 +406,7 @@ export function HistoryView() {
 
   React.useEffect(() => {
     fetchProposalTimelines().then(data => {
+      setTimelines(data);
       const mapped: StellarTransaction[] = data.map(p => ({
         id: `onchain-${p.proposal_id}`,
         transferId: `ONCHAIN-PROP-${p.proposal_id}`,
@@ -518,7 +578,7 @@ export function HistoryView() {
             </motion.div>
           ) : (
             filtered.map((tx, i) => (
-              <TxRowCard key={tx.id} tx={tx} index={i} />
+              <TxRowCard key={tx.id || i} tx={tx} index={i} timelines={timelines} />
             ))
           )}
         </AnimatePresence>
