@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@creit-tech/stellar-wallets-kit": "npm:@jsr/creit-tech__stellar-wallets-kit@^2.5.0",
+    "@creit.tech/stellar-wallets-kit": "^2.5.0",
     "@google/genai": "^2.4.0",
     "@hookform/resolvers": "^5.2.1",
     "@react-three/drei": "^10.7.7",

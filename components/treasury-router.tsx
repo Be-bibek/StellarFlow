@@ -93,11 +93,11 @@ export function TreasuryRouter({ walletKey, balance, maxLimit, onConnect, onDisc
   };
 
   return (
-    <div className="w-full max-w-xl mx-auto relative group">
+    <div className="w-full max-w-2xl mx-auto relative group">
       {/* Dynamic Glow */}
       <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/30 to-purple-500/30 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200" />
       
-      <div className="relative bg-white/80 dark:bg-[#08060D]/80 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl p-6 sm:p-8">
+      <div className="relative bg-white/80 dark:bg-[#08060D]/80 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl p-8 sm:p-10">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center p-[1px]">

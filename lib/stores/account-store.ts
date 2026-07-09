@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { fetchXlmBalance } from '@/lib/stellar';
+import { openWalletModal, disconnectWallet as kitDisconnect } from '@/lib/wallet-kit';
 
 export type SavedAccount = {
   id: string; // Unique ID, can just be the public key
@@ -19,6 +20,8 @@ interface AccountStoreState {
   setActiveAccount: (id: string) => void;
   refreshBalances: () => Promise<void>;
   fetchXlmPrice: () => Promise<void>;
+  connectWallet: () => Promise<void>;
+  disconnectWallet: () => Promise<void>;
 }
 
 export const useAccountStore = create<AccountStoreState>()(
@@ -94,6 +97,27 @@ export const useAccountStore = create<AccountStoreState>()(
         const price = 0.125; 
         set({ xlmPriceUsd: price });
         get().refreshBalances();
+      },
+
+      connectWallet: async () => {
+        try {
+          const { address } = await openWalletModal();
+          if (address) {
+            await get().addAccount("Connected Wallet", address);
+            set({ activeAccountId: address });
+          }
+        } catch (error) {
+          throw error;
+        }
+      },
+
+      disconnectWallet: async () => {
+        try {
+          await kitDisconnect();
+        } catch(e) {
+          console.error(e);
+        }
+        set({ activeAccountId: null });
       }
     }),
     {

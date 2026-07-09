@@ -18,6 +18,7 @@ import {
   Command, 
   User,
   LogOut,
+  Activity,
   History,
   ArrowDownToLine,
   QrCode,
@@ -32,6 +33,7 @@ import { BatchView } from '@/components/views/batch-view';
 import { TransitView } from '@/components/views/transit-view';
 import { MultiSigView } from '@/components/views/multisig-view';
 import { AnalyticsView } from '@/components/views/analytics-view';
+import { OverviewView } from '@/components/views/overview-view';
 import { SettingsView } from '@/components/views/settings-view';
 import { HistoryView } from '@/components/views/history-view';
 import { GovernanceView } from '@/components/views/governance-view';
@@ -51,7 +53,7 @@ import { AccountSwitcherModal } from '@/components/ui/account-switcher-modal';
 import Carousel from '@/components/ui/carousel';
 import GooeyNav from '@/components/ui/gooey-nav';
 
-type ActiveView = 'dashboard' | 'transfer' | 'history' | 'treasury' | 'routing' | 'batch' | 'transit' | 'multisig' | 'analytics' | 'settings' | 'governance' | 'funding';
+type ActiveView = 'dashboard' | 'transfer' | 'history' | 'treasury' | 'routing' | 'batch' | 'transit' | 'multisig' | 'analytics' | 'settings' | 'governance' | 'funding' | 'overview';
 
 const ACCOUNT_COLORS = [
   '0ea5e9', // sky-500
@@ -207,6 +209,7 @@ export default function AppShell() {
     { id: 'treasury',   label: 'Treasury Center',        icon: Wallet          },
     { id: 'batch',      label: 'Batch Transfers',        icon: FileBox         },
     { id: 'analytics',  label: 'Intelligence Analytics', icon: BarChart3       },
+    { id: 'overview',   label: 'Overview',               icon: Activity        },
     { id: 'settings',   label: 'System Settings',        icon: Settings        },
   ] as const;
 
@@ -219,6 +222,7 @@ export default function AppShell() {
       case 'batch':     return <BatchView />;
       case 'transit':   return <TransitView onNavigate={setActiveView} />;
       case 'analytics': return <AnalyticsView />;
+      case 'overview':  return <OverviewView />;
       case 'settings':  return <SettingsView />;
       case 'history':   return <HistoryView />;
       case 'governance': return <GovernanceView onNavigate={setActiveView} />;

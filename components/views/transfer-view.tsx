@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { TreasuryRouter } from '@/components/treasury-router';
-import { ArrowRightLeft, Landmark, Users, Briefcase, Lock, Megaphone, Wallet } from 'lucide-react';
+import { ArrowRightLeft, Landmark, Users, Briefcase, Lock, Megaphone, Wallet, CheckCircle2, AlertTriangle } from 'lucide-react';
 import Carousel from '@/components/ui/carousel';
 import LaserFlow from '@/components/ui/laser-flow';
 import { useTreasuryStore } from '@/lib/stores/treasury-store';
@@ -30,12 +30,40 @@ const getWalletColors = (type: string) => {
 };
 
 export function TransferView() {
-  const [walletKey, setWalletKey] = useState<string | null>(null);
-  const [balance, setBalance] = useState<string | null>("0");
-  const [maxLimit, setMaxLimit] = useState<bigint | null>(BigInt(50000));
-
   const wallets = useTreasuryStore((s) => s.wallets);
-  const xlmPriceUsd = useAccountStore((s) => s.xlmPriceUsd) || 0.125;
+  const [toast, setToast] = useState<{ msg: string; success: boolean } | null>(null);
+  
+  const showToast = (msg: string, success: boolean = false) => {
+    setToast({ msg, success });
+    setTimeout(() => setToast(null), 3000);
+  };
+  
+  const { 
+    connectWallet, 
+    disconnectWallet, 
+    activeAccountId, 
+    accounts,
+    xlmPriceUsd 
+  } = useAccountStore();
+
+  const activeAccount = accounts.find(a => a.id === activeAccountId);
+  
+  const walletKey = activeAccount ? activeAccount.publicKey : null;
+  const balance = activeAccount ? activeAccount.balanceXlm.toString() : "0";
+  const maxLimit = activeAccount ? BigInt(250000) : BigInt(50000); // Mock limit
+
+  const handleConnect = async () => {
+    try {
+      await connectWallet();
+      showToast("Wallet connected successfully", true);
+    } catch (e) {
+      showToast("Connection cancelled");
+    }
+  };
+
+  const handleDisconnect = () => {
+    disconnectWallet();
+  };
 
   const carouselItems = wallets.map((w, i) => {
     const colors = getWalletColors(w.type);
@@ -51,7 +79,7 @@ export function TransferView() {
     return {
       id: i + 1,
       title: w.name,
-      description: `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(w.balance)} XLM (~${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(w.balance * xlmPriceUsd)})`,
+      description: `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(w.balance)} XLM (~${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(w.balance * (xlmPriceUsd || 0.125))})`,
       icon: getWalletIcon(w.type),
       colorFrom: colors.colorFrom,
       colorTo: colors.colorTo,
@@ -60,20 +88,8 @@ export function TransferView() {
     };
   });
 
-  const handleConnect = async () => {
-    setWalletKey('GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX');
-    setBalance("150000");
-    setMaxLimit(250000n);
-  };
-
-  const handleDisconnect = () => {
-    setWalletKey(null);
-    setBalance("0");
-    setMaxLimit(50000n);
-  };
-
   return (
-    <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto h-full p-6">
+    <div className="flex flex-col gap-6 w-full max-w-[1400px] mx-auto h-full p-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-2">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-[#F8FAFC] flex items-center gap-3">
@@ -84,13 +100,13 @@ export function TransferView() {
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6 w-full items-start">
+      <div className="flex flex-col lg:flex-row gap-8 lg:gap-16 w-full items-center justify-center mt-6 lg:mt-20">
         {/* Left Side: Wallets Carousel */}
-        <div className="w-full lg:w-[350px] shrink-0">
-          <div style={{ height: '400px', position: 'relative' }} className="w-full flex justify-center">
+        <div className="w-full lg:w-[450px] shrink-0">
+          <div className="w-full flex justify-center h-[350px] md:h-[400px] lg:h-[480px] relative overflow-hidden md:overflow-visible">
             <Carousel 
               items={carouselItems.length > 0 ? carouselItems : undefined}
-              baseWidth={320}
+              baseWidth={360}
               autoplay={true}
               autoplayDelay={3000}
               pauseOnHover={true}
@@ -103,9 +119,9 @@ export function TransferView() {
         {/* Right Side: Transfer Form with LaserFlow */}
         <div className="flex-1 w-full min-w-0 relative">
           
-          <div className="relative z-10 w-full">
+          <div className="relative z-10 w-full mt-4 lg:mt-0">
             {/* LaserFlow Background - Spans infinitely upwards from the top edge of the box */}
-            <div className="absolute bottom-[calc(100%-30px)] left-0 right-0 w-full h-[600px] opacity-100 mix-blend-screen pointer-events-none z-0">
+            <div className="hidden lg:block absolute bottom-[calc(100%-30px)] left-0 right-0 w-full h-[600px] opacity-100 mix-blend-screen pointer-events-none z-0">
               <LaserFlow 
                 color="#a855f7" 
                 horizontalBeamOffset={0.0} 
@@ -127,6 +143,23 @@ export function TransferView() {
           </div>
         </div>
       </div>
+
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+            className={`fixed bottom-6 right-6 flex items-center gap-2 px-4 py-3 rounded-xl shadow-2xl z-50 text-sm font-medium ${
+              toast.success ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
+            }`}
+          >
+            {toast.success ? <CheckCircle2 className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
+            <span className="max-w-xs">{toast.msg}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

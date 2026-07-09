@@ -491,3 +491,128 @@ export async function fetchAllOnChainProposals(): Promise<any[]> {
     return [];
   }
 }
+
+// ── Stellar Native DEX Swap (PathPayment) ─────────────────────────────────────
+
+export interface SwapAsset {
+  code: string;       // e.g. "XLM", "USDC"
+  issuer?: string;    // empty for native XLM
+}
+
+export interface SwapQuote {
+  sendAsset: SwapAsset;
+  destAsset: SwapAsset;
+  sendAmount: string;    // exact amount user pays
+  destAmount: string;    // estimated amount user receives
+  path: { asset_code?: string; asset_issuer?: string; asset_type: string }[];
+  exchangeRate: string;  // human-readable "1 XLM = X USDC"
+}
+
+/**
+ * Fetch the best available swap quote from the Stellar DEX.
+ * Uses Horizon's /paths/strict-send endpoint to discover liquidity paths.
+ */
+export async function fetchSwapQuote(
+  sendAsset: SwapAsset,
+  destAsset: SwapAsset,
+  sendAmount: string
+): Promise<SwapQuote | null> {
+  try {
+    const sendCode = sendAsset.code === "XLM" ? "native" : sendAsset.code;
+    const destCode = destAsset.code === "XLM" ? "native" : destAsset.code;
+
+    const params = new URLSearchParams({
+      source_asset_type: sendCode === "native" ? "native" : "credit_alphanum4",
+      ...(sendCode !== "native" && { source_asset_code: sendCode }),
+      ...(sendAsset.issuer && sendCode !== "native" && { source_asset_issuer: sendAsset.issuer }),
+      source_amount: sendAmount,
+      destination_asset_type: destCode === "native" ? "native" : "credit_alphanum4",
+      ...(destCode !== "native" && { destination_asset_code: destCode }),
+      ...(destAsset.issuer && destCode !== "native" && { destination_asset_issuer: destAsset.issuer }),
+    });
+
+    const res = await fetch(
+      `https://horizon-testnet.stellar.org/paths/strict-send?${params.toString()}`
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const record = data._embedded?.records?.[0];
+    if (!record) return null;
+
+    const destAmt = parseFloat(record.destination_amount).toFixed(4);
+    const rate = (parseFloat(destAmt) / parseFloat(sendAmount)).toFixed(6);
+
+    return {
+      sendAsset,
+      destAsset,
+      sendAmount,
+      destAmount: destAmt,
+      path: record.path ?? [],
+      exchangeRate: `1 ${sendAsset.code} = ${rate} ${destAsset.code}`,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Execute a DEX path payment swap.
+ * Builds a PathPaymentStrictSend tx, signs with Freighter, and submits.
+ */
+export async function executePathPaymentSwap(
+  senderPublicKey: string,
+  sendAsset: SwapAsset,
+  destAsset: SwapAsset,
+  sendAmount: string,
+  minDestAmount: string,
+  pathAssets: { asset_code?: string; asset_issuer?: string; asset_type: string }[]
+): Promise<{ success: boolean; hash?: string; error?: string }> {
+  try {
+    const toStellarAsset = (a: SwapAsset) =>
+      a.code === "XLM" ? Asset.native() : new Asset(a.code, a.issuer!);
+
+    const pathStellarAssets = pathAssets
+      .filter(p => p.asset_type !== "native" && p.asset_code)
+      .map(p => new Asset(p.asset_code!, p.asset_issuer));
+
+    const sourceAccount = await HORIZON_SERVER.loadAccount(senderPublicKey);
+    const fee = await HORIZON_SERVER.fetchBaseFee();
+
+    const transaction = new TransactionBuilder(sourceAccount, {
+      fee: String(fee),
+      networkPassphrase: NETWORK_PASSPHRASE,
+    })
+      .addOperation(
+        Operation.pathPaymentStrictSend({
+          sendAsset: toStellarAsset(sendAsset),
+          sendAmount,
+          destination: senderPublicKey, // swapping to self (balance conversion)
+          destAsset: toStellarAsset(destAsset),
+          destMin: minDestAmount,
+          path: pathStellarAssets,
+        })
+      )
+      .setTimeout(60)
+      .build();
+
+    const signedResult = await signTransaction(transaction.toXDR(), {
+      networkPassphrase: NETWORK_PASSPHRASE,
+    });
+
+    if (typeof signedResult === "object" && signedResult !== null && "error" in signedResult) {
+      const errMsg = String((signedResult as any).error);
+      if (errMsg.toLowerCase().includes("reject")) throw new UserRejectedError();
+      throw new Error(errMsg);
+    }
+
+    const signedXdr = typeof signedResult === "string" ? signedResult : (signedResult as any).signedTxXdr;
+    const txToSubmit = TransactionBuilder.fromXDR(signedXdr, NETWORK_PASSPHRASE);
+    const response = await HORIZON_SERVER.submitTransaction(txToSubmit as any);
+
+    return { success: true, hash: response.hash };
+  } catch (err: any) {
+    if (err instanceof UserRejectedError) return { success: false, error: err.message };
+    return { success: false, error: err.message ?? "Swap failed" };
+  }
+}
+
