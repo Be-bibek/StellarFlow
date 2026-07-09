@@ -154,12 +154,12 @@ function CarouselItem({ item, index, itemWidth, round, trackItemOffset, x, trans
 
       <div className="relative z-10 p-6 flex flex-col h-full justify-end">
         {item.cardNumber && (
-          <div className="mb-4 font-mono text-xl text-white/90 tracking-widest drop-shadow-md">
+          <div className="mb-4 font-mono text-lg md:text-xl text-white/90 tracking-widest drop-shadow-md truncate">
             {item.cardNumber}
           </div>
         )}
-        <div className="mb-1 font-black text-2xl tracking-tight text-white drop-shadow-md uppercase">{item.title}</div>
-        <div className="text-sm font-medium text-white/80 drop-shadow-sm">{item.description}</div>
+        <div className="mb-1 font-black text-xl md:text-2xl tracking-tight text-white drop-shadow-md uppercase truncate">{item.title}</div>
+        <div className="text-xs md:text-sm font-medium text-white/80 drop-shadow-sm truncate">{item.description}</div>
       </div>
     </motion.div>
   );

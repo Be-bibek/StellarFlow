@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { TreasuryRouter } from '@/components/treasury-router';
 import { ArrowRightLeft, Landmark, Users, Briefcase, Lock, Megaphone, Wallet, CheckCircle2, AlertTriangle } from 'lucide-react';
@@ -52,6 +52,17 @@ export function TransferView() {
   const balance = activeAccount ? activeAccount.balanceXlm.toString() : "0";
   const maxLimit = activeAccount ? BigInt(250000) : BigInt(50000); // Mock limit
 
+  // Responsive sizing for the carousel
+  const [carouselWidth, setCarouselWidth] = useState(360);
+  useEffect(() => {
+    const handleResize = () => {
+      setCarouselWidth(window.innerWidth < 768 ? 280 : 360);
+    };
+    handleResize(); // set initial
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const handleConnect = async () => {
     try {
       await connectWallet();
@@ -89,7 +100,7 @@ export function TransferView() {
   });
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-[1400px] mx-auto h-full p-6">
+    <div className="flex flex-col gap-6 w-full max-w-[1400px] mx-auto h-full p-4 md:p-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-2">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-[#F8FAFC] flex items-center gap-3">
@@ -103,10 +114,10 @@ export function TransferView() {
       <div className="flex flex-col lg:flex-row gap-8 lg:gap-16 w-full items-center justify-center mt-6 lg:mt-20">
         {/* Left Side: Wallets Carousel */}
         <div className="w-full lg:w-[450px] shrink-0">
-          <div className="w-full flex justify-center h-[350px] md:h-[400px] lg:h-[480px] relative overflow-hidden md:overflow-visible">
+          <div className="w-full flex justify-center h-[380px] md:h-[420px] lg:h-[480px] relative overflow-hidden md:overflow-visible">
             <Carousel 
               items={carouselItems.length > 0 ? carouselItems : undefined}
-              baseWidth={360}
+              baseWidth={carouselWidth}
               autoplay={true}
               autoplayDelay={3000}
               pauseOnHover={true}
