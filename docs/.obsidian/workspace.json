@@ -1,0 +1,210 @@
+{
+  "main": {
+    "id": "8837222b14e12039",
+    "type": "split",
+    "children": [
+      {
+        "id": "774e66024b92bf4c",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "77c85f7bf990ed93",
+            "type": "leaf",
+            "state": {
+              "type": "graph",
+              "state": {},
+              "icon": "lucide-git-fork",
+              "title": "Graph view"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "23feabeff9dc9636",
+    "type": "split",
+    "children": [
+      {
+        "id": "d7ddbc839e42d6de",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "182c135d255e81e6",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "7758f8d82a4f27db",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "ff3e11ee02209343",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "f96e27b4239fa275",
+    "type": "split",
+    "children": [
+      {
+        "id": "27ca4ee413b1efd3",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "f0b286d85798ac7d",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks"
+            }
+          },
+          {
+            "id": "b4b22c74518eec42",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links"
+            }
+          },
+          {
+            "id": "9baa9ba22b38b8f4",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "13a0d37922615d2a",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "15fadc38e9e872ae",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "77c85f7bf990ed93",
+  "lastOpenFiles": [
+    "core-logic/decentralized-auth.md",
+    "network/rpc-pipeline.md",
+    "data/database-schema.md",
+    "architecture/flutter-stellarflow-os.md",
+    "backend/postgresql-database.md",
+    "backend/rust-api-architecture.md",
+    "backend",
+    "stellar/transaction-mechanics.md",
+    "stellar/horizon-and-rpc.md",
+    "stellar",
+    "nextjs/ui-components.md",
+    "nextjs/pages-and-routing.md",
+    "nextjs",
+    "architecture/flutter-wallet-structure.md",
+    "Untitled.canvas",
+    "network/transaction-lifecycle.md",
+    "network",
+    "data/on-chain-state.md",
+    "data",
+    "contracts/smart-routing.md",
+    "contracts/treasury-vault-contract.md",
+    "contracts/soroban-smart-contracts.md",
+    "contracts",
+    "architecture/monorepo-structure.md",
+    "architecture",
+    "index.md",
+    "specifications/ui-deck-spec.md",
+    "integrations/cross-platform-bridge.md"
+  ]
+}
