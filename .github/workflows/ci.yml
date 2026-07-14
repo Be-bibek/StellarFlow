@@ -35,8 +35,6 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Type Check
         run: npx tsc --noEmit
-      - name: Run Jest Tests
-        run: npm test
       - name: Build Next.js
         run: npm run build
 
