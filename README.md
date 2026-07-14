@@ -616,8 +616,8 @@ This integration turns StellarFlow's multi-sig approvals from a **static rule** 
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/Be-bibek/web3-private.git
-cd web3-private
+git clone https://github.com/Be-bibek/StellarFlow.git
+cd StellarFlow
 
 # 2. Install frontend dependencies and start dev server
 npm install
