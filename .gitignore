@@ -137,7 +137,7 @@ backend/transactions.json
 coreconcept.md
 
 # Package lock (to prevent npm ci errors in Railway)
-package-lock.json
+# package-lock.json removed so GitHub Actions can run npm ci
 
 .cursor/
 .cursorrules
