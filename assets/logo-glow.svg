@@ -1,0 +1,22 @@
+<svg width="276" height="276" viewBox="-10 -10 276 276" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Sky-blue pulsing halo glow -->
+  <rect width="256" height="256" rx="60" fill="none" stroke="#38bdf8" stroke-width="8">
+    <animate attributeName="opacity" values="0; 0.6; 0" dur="2s" repeatCount="indefinite"/>
+  </rect>
+
+  <rect width="256" height="256" rx="60" fill="url(#glassGrad)" stroke="#38bdf8" stroke-width="2" />
+  
+  <path d="M128 30 L185 115 L128 140 Z" fill="#c084fc" />
+  <path d="M128 30 L71 115 L128 140 Z" fill="#818cf8" />
+  <path d="M128 152 L185 122 L128 226 Z" fill="#e879f9" />
+  <path d="M128 152 L71 122 L128 226 Z" fill="#a78bfa" />
+  <path d="M128 140 L185 115 L128 126 Z" fill="#a855f7" />
+  <path d="M128 140 L71 115 L128 126 Z" fill="#6366f1" />
+
+  <defs>
+    <linearGradient id="glassGrad" x1="0" y1="0" x2="256" y2="256" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffffff" />
+      <stop offset="1" stop-color="#e5e7eb" />
+    </linearGradient>
+  </defs>
+</svg>

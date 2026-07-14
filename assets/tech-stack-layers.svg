@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="420" viewBox="0 0 820 420">
+  <defs>
+    <style>
+      :root {
+        --bg-color: #ffffff;
+        --text-primary: #1f2937;
+        --text-secondary: #6b7280;
+        --border-color: #e5e7eb;
+        
+        --gold-bg: #fef08a;
+        --gold-border: #eab308;
+        --gold-text: #854d0e;
+        
+        --blue-bg: #bfdbfe;
+        --blue-border: #3b82f6;
+        --blue-text: #1e40af;
+        
+        --green-bg: #bbf7d0;
+        --green-border: #22c55e;
+        --green-text: #166534;
+        
+        --red-bg: #fecaca;
+        --red-border: #ef4444;
+        --red-text: #991b1b;
+        
+        --gray-bg: #f3f4f6;
+        --gray-border: #d1d5db;
+        
+        --indigo-bg: #e0e7ff;
+        --indigo-border: #6366f1;
+        --indigo-text: #3730a3;
+        
+        --purple-bg: #f3e8ff;
+        --purple-border: #a855f7;
+        --purple-text: #6b21a8;
+      }
+      
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg-color: #0f172a;
+          --text-primary: #f8fafc;
+          --text-secondary: #94a3b8;
+          --border-color: #334155;
+          
+          --gold-bg: #713f12;
+          --gold-text: #fef08a;
+          
+          --blue-bg: #1e3a8a;
+          --blue-text: #bfdbfe;
+          
+          --green-bg: #14532d;
+          --green-text: #bbf7d0;
+          
+          --red-bg: #7f1d1d;
+          --red-text: #fecaca;
+          
+          --gray-bg: #1e293b;
+          --gray-border: #475569;
+          
+          --indigo-bg: #312e81;
+          --indigo-text: #c7d2fe;
+          
+          --purple-bg: #4c1d95;
+          --purple-text: #e9d5ff;
+        }
+      }
+      
+      .title { font-family: system-ui, -apple-system, sans-serif; font-size: 22px; font-weight: 700; fill: var(--text-primary); }
+      .subtitle { font-family: system-ui, -apple-system, sans-serif; font-size: 14px; fill: var(--text-secondary); }
+      .layer-title { font-family: system-ui, -apple-system, sans-serif; font-size: 15px; font-weight: 700; }
+      .layer-desc { font-family: system-ui, -apple-system, sans-serif; font-size: 13px; }
+      .layer-badge { font-family: system-ui, -apple-system, sans-serif; font-size: 12px; font-weight: 600; }
+      .box { stroke-width: 1.5; }
+      .line { stroke: var(--border-color); stroke-width: 2; fill: none; }
+      .arrow { fill: var(--border-color); }
+    </style>
+  </defs>
+
+  <rect width="820" height="420" rx="12" fill="var(--bg-color)" />
+  <rect width="820" height="420" rx="12" fill="none" stroke="var(--border-color)" stroke-width="2" />
+
+  <text x="410" y="40" text-anchor="middle" class="title">Tech Stack — Layer By Layer</text>
+  <text x="410" y="62" text-anchor="middle" class="subtitle">Full-stack enterprise architecture powering StellarFlow OS</text>
+
+  <!-- L1: Blockchain -->
+  <rect x="40" y="90" width="740" height="46" rx="8" class="box" fill="var(--indigo-bg)" stroke="var(--indigo-border)" />
+  <text x="60" y="110" class="layer-title" fill="var(--indigo-text)">⛓️ BLOCKCHAIN LAYER</text>
+  <text x="60" y="128" class="layer-desc" fill="var(--text-secondary)">Stellar Network · Soroban RPC · Horizon REST API · ~5s finality · SCP consensus</text>
+  <text x="760" y="118" text-anchor="end" class="layer-badge" fill="var(--indigo-text)">LAYER 1</text>
+  
+  <line x1="410" y1="136" x2="410" y2="150" class="line" />
+  <polygon points="410,154 406,146 414,146" class="arrow" />
+
+  <!-- L2: Smart Contracts -->
+  <rect x="40" y="150" width="740" height="46" rx="8" class="box" fill="var(--green-bg)" stroke="var(--green-border)" />
+  <text x="60" y="170" class="layer-title" fill="var(--green-text)">📝 SMART CONTRACT LAYER</text>
+  <text x="60" y="188" class="layer-desc" fill="var(--text-secondary)">Soroban (Rust · #![no_std] WASM) · AdminArray multi-sig · JIT route_payout</text>
+  <text x="760" y="178" text-anchor="end" class="layer-badge" fill="var(--green-text)">LAYER 2</text>
+
+  <line x1="410" y1="196" x2="410" y2="210" class="line" />
+  <polygon points="410,214 406,206 414,206" class="arrow" />
+
+  <!-- L3: Backend -->
+  <rect x="40" y="210" width="740" height="46" rx="8" class="box" fill="var(--red-bg)" stroke="var(--red-border)" />
+  <text x="60" y="230" class="layer-title" fill="var(--red-text)">🦀 BACKEND LAYER</text>
+  <text x="60" y="248" class="layer-desc" fill="var(--text-secondary)">Rust · Axum · Tokio async runtime · WebSocket API · Channel Worker Pool</text>
+  <text x="760" y="238" text-anchor="end" class="layer-badge" fill="var(--red-text)">LAYER 3</text>
+
+  <line x1="220" y1="256" x2="220" y2="270" class="line" />
+  <polygon points="220,274 216,266 224,266" class="arrow" />
+  
+  <line x1="600" y1="256" x2="600" y2="270" class="line" />
+  <polygon points="600,274 596,266 604,266" class="arrow" />
+
+  <!-- L4: Storage (Split) -->
+  <rect x="40" y="270" width="360" height="56" rx="8" class="box" fill="var(--gray-bg)" stroke="var(--gray-border)" />
+  <text x="60" y="295" class="layer-title" fill="var(--text-primary)">🐘 PostgreSQL (Railway)</text>
+  <text x="60" y="315" class="layer-desc" fill="var(--text-secondary)">SQLx pool · 50 conns · Audit ledger</text>
+
+  <rect x="420" y="270" width="360" height="56" rx="8" class="box" fill="var(--gold-bg)" stroke="var(--gold-border)" />
+  <text x="440" y="295" class="layer-title" fill="var(--gold-text)">⚡ Redis Cache</text>
+  <text x="440" y="315" class="layer-desc" fill="var(--text-secondary)">O(1) XDR vault · Session state</text>
+  <text x="760" y="303" text-anchor="end" class="layer-badge" fill="var(--gold-text)">LAYER 4</text>
+
+  <!-- L5: Frontend (Split) -->
+  <rect x="40" y="340" width="360" height="56" rx="8" class="box" fill="var(--blue-bg)" stroke="var(--blue-border)" />
+  <text x="60" y="365" class="layer-title" fill="var(--blue-text)">⚡ Next.js 15 Web (Vercel)</text>
+  <text x="60" y="385" class="layer-desc" fill="var(--text-secondary)">TailwindCSS v4 · Framer Motion · PWA</text>
+
+  <rect x="420" y="340" width="360" height="56" rx="8" class="box" fill="var(--purple-bg)" stroke="var(--purple-border)" />
+  <text x="440" y="365" class="layer-title" fill="var(--purple-text)">📱 Flutter Mobile (In Dev)</text>
+  <text x="440" y="385" class="layer-desc" fill="var(--text-secondary)">Dart · Secure Enclave · Offline signing</text>
+  <text x="760" y="373" text-anchor="end" class="layer-badge" fill="var(--purple-text)">LAYER 5</text>
+</svg>

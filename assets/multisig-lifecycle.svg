@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="420" viewBox="0 0 820 420">
+  <defs>
+    <style>
+      :root {
+        --bg-color: #ffffff;
+        --text-primary: #1f2937;
+        --text-secondary: #6b7280;
+        --border-color: #e5e7eb;
+        
+        --gold-bg: #fef08a;
+        --gold-border: #eab308;
+        --gold-text: #854d0e;
+        
+        --green-bg: #bbf7d0;
+        --green-border: #22c55e;
+        --green-text: #166534;
+        
+        --red-bg: #fecaca;
+        --red-border: #ef4444;
+        --red-text: #991b1b;
+        
+        --gray-bg: #f3f4f6;
+        --gray-border: #d1d5db;
+        
+        --indigo-bg: #e0e7ff;
+        --indigo-border: #6366f1;
+        --indigo-text: #3730a3;
+      }
+      
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg-color: #0f172a;
+          --text-primary: #f8fafc;
+          --text-secondary: #94a3b8;
+          --border-color: #334155;
+          
+          --gold-bg: #713f12;
+          --gold-text: #fef08a;
+          
+          --green-bg: #14532d;
+          --green-text: #bbf7d0;
+          
+          --red-bg: #7f1d1d;
+          --red-text: #fecaca;
+          
+          --gray-bg: #1e293b;
+          --gray-border: #475569;
+          
+          --indigo-bg: #312e81;
+          --indigo-text: #c7d2fe;
+        }
+      }
+      
+      .title { font-family: system-ui, -apple-system, sans-serif; font-size: 22px; font-weight: 700; fill: var(--text-primary); }
+      .subtitle { font-family: system-ui, -apple-system, sans-serif; font-size: 14px; fill: var(--text-secondary); }
+      .box-title { font-family: system-ui, -apple-system, sans-serif; font-size: 14px; font-weight: 700; }
+      .box-desc { font-family: system-ui, -apple-system, sans-serif; font-size: 12px; }
+      .line { stroke: var(--border-color); stroke-width: 2; fill: none; }
+      .arrow { fill: var(--border-color); }
+    </style>
+  </defs>
+
+  <rect width="820" height="420" rx="12" fill="var(--bg-color)" />
+  <rect width="820" height="420" rx="12" fill="none" stroke="var(--border-color)" stroke-width="2" />
+
+  <text x="410" y="40" text-anchor="middle" class="title">Multi-Sig XDR Approval Lifecycle</text>
+  <text x="410" y="62" text-anchor="middle" class="subtitle">From proposal creation to threshold met, auto-submission, and on-chain confirmation.</text>
+
+  <!-- Connectors -->
+  <line x1="150" y1="200" x2="230" y2="200" class="line" />
+  <polygon points="230,196 238,200 230,204" class="arrow" />
+
+  <line x1="310" y1="200" x2="390" y2="200" class="line" />
+  <polygon points="390,196 398,200 390,204" class="arrow" />
+
+  <line x1="470" y1="200" x2="550" y2="200" class="line" />
+  <polygon points="550,196 558,200 550,204" class="arrow" />
+
+  <line x1="630" y1="200" x2="710" y2="200" class="line" />
+  <polygon points="710,196 718,200 710,204" class="arrow" />
+
+  <!-- Expiry Branch -->
+  <path d="M110 160 Q110 100 270 100" class="line" stroke-dasharray="6 4" />
+  <polygon points="270,96 278,100 270,104" class="arrow" />
+  <rect x="290" y="84" width="120" height="32" rx="6" fill="var(--red-bg)" stroke="var(--red-border)" stroke-width="1.5" />
+  <text x="350" y="105" text-anchor="middle" class="box-title" fill="var(--red-text)">TTL EXPIRED</text>
+
+  <!-- Stage 1 -->
+  <rect x="70" y="160" width="80" height="80" rx="40" fill="var(--gray-bg)" stroke="var(--gray-border)" stroke-width="2" />
+  <text x="110" y="195" text-anchor="middle" class="box-title" fill="var(--text-primary)">1</text>
+  <text x="110" y="210" text-anchor="middle" class="box-desc" fill="var(--text-secondary)">Pending</text>
+  <text x="110" y="260" text-anchor="middle" class="box-title" fill="var(--text-primary)">Staged in Redis</text>
+  <text x="110" y="278" text-anchor="middle" class="box-desc" fill="var(--text-secondary)">O(1) Access</text>
+
+  <!-- Stage 2 -->
+  <rect x="230" y="160" width="80" height="80" rx="40" fill="var(--indigo-bg)" stroke="var(--indigo-border)" stroke-width="2" />
+  <text x="270" y="195" text-anchor="middle" class="box-title" fill="var(--indigo-text)">2</text>
+  <text x="270" y="210" text-anchor="middle" class="box-desc" fill="var(--indigo-text)">Signing</text>
+  <text x="270" y="260" text-anchor="middle" class="box-title" fill="var(--text-primary)">Ed25519 Sigs</text>
+  <text x="270" y="278" text-anchor="middle" class="box-desc" fill="var(--text-secondary)">Injected to XDR</text>
+
+  <!-- Stage 3 -->
+  <rect x="390" y="160" width="80" height="80" rx="40" fill="var(--green-bg)" stroke="var(--green-border)" stroke-width="2" />
+  <text x="430" y="195" text-anchor="middle" class="box-title" fill="var(--green-text)">3</text>
+  <text x="430" y="210" text-anchor="middle" class="box-desc" fill="var(--green-text)">Met</text>
+  <text x="430" y="260" text-anchor="middle" class="box-title" fill="var(--text-primary)">Threshold Met</text>
+  <text x="430" y="278" text-anchor="middle" class="box-desc" fill="var(--text-secondary)">Auto-Triggered</text>
+
+  <!-- Stage 4 -->
+  <rect x="550" y="160" width="80" height="80" rx="40" fill="var(--gray-bg)" stroke="var(--gray-border)" stroke-width="2" />
+  <text x="590" y="195" text-anchor="middle" class="box-title" fill="var(--text-primary)">4</text>
+  <text x="590" y="210" text-anchor="middle" class="box-desc" fill="var(--text-secondary)">Submit</text>
+  <text x="590" y="260" text-anchor="middle" class="box-title" fill="var(--text-primary)">Horizon API</text>
+  <text x="590" y="278" text-anchor="middle" class="box-desc" fill="var(--text-secondary)">TX Submission</text>
+
+  <!-- Stage 5 -->
+  <rect x="710" y="160" width="80" height="80" rx="40" fill="var(--gold-bg)" stroke="var(--gold-border)" stroke-width="2" />
+  <text x="750" y="195" text-anchor="middle" class="box-title" fill="var(--gold-text)">5</text>
+  <text x="750" y="210" text-anchor="middle" class="box-desc" fill="var(--gold-text)">On-Chain</text>
+  <text x="750" y="260" text-anchor="middle" class="box-title" fill="var(--text-primary)">Confirmed</text>
+  <text x="750" y="278" text-anchor="middle" class="box-desc" fill="var(--text-secondary)">Ledger Recorded</text>
+
+  <line x1="40" y1="340" x2="780" y2="340" stroke="var(--border-color)" stroke-width="1" />
+  <text x="410" y="370" text-anchor="middle" class="subtitle">XDR signatures stored in Redis (O(1) · 24h TTL) · PostgreSQL enforces UNIQUE(approval_id, signer_address)</text>
+  <text x="410" y="390" text-anchor="middle" class="subtitle">Double-signing physically impossible at database layer · Auto-submit on N-of-M threshold</text>
+</svg>

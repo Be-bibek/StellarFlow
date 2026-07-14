@@ -54,6 +54,14 @@ The following metrics demonstrate StellarFlow's transactional throughput advanta
   <img src="./assets/latency-chart.svg" alt="Settlement Latency Comparison Chart" />
 </p>
 
+| Metric | Traditional Bank | Ethereum (L1) | **StellarFlow** |
+|---|---|---|---|
+| **Settlement Time** | 2–3 business days | 15–60 seconds | ✅ **~5 seconds** |
+| **Batch of 500 payouts** | Manual, days | Serial, minutes | ✅ **Parallel, seconds** |
+| **Transaction Fee** | $25–$50 wire fee | $5–$80 gas fee | ✅ **~$0.0001 per tx** |
+| **Concurrency Model** | Single-threaded queue | Nonce-serial | ✅ **Channel Account Pool** |
+| **Audit Trail** | PDF exports | On-chain only | ✅ **PostgreSQL + On-chain** |
+| **Key Control** | Custodial (bank holds) | Self-custody | ✅ **Non-custodial multi-sig** |
 
 ---
 
@@ -66,10 +74,10 @@ The following metrics demonstrate StellarFlow's transactional throughput advanta
 ### 💸 Batch Transfers
 Execute **thousands of disbursements** in a single atomic transaction. Perfect for payroll, dividends, and airdrop distributions at near-zero cost.
 
-- Parallel transaction construction
+- Parallel Channel Account worker pool
 - Atomic multi-payment bundles
 - CSV / JSON import support
-- Real-time status monitoring
+- `FOR UPDATE SKIP LOCKED` concurrency
 
 </td>
 <td width="50%">
@@ -77,10 +85,10 @@ Execute **thousands of disbursements** in a single atomic transaction. Perfect f
 ### 🧭 Smart Routing
 AI-assisted pathfinding that automatically discovers the **most capital-efficient route** across Stellar's DEX for any cross-currency settlement.
 
-- Multi-hop path discovery
+- Multi-hop path discovery via Soroban
 - Slippage protection
 - Live price oracle integration
-- Admin-key copy for demos
+- JIT (Just-In-Time) vault split map
 
 </td>
 </tr>
@@ -91,7 +99,7 @@ AI-assisted pathfinding that automatically discovers the **most capital-efficien
 Enforce **threshold-based signing** requirements on every high-value action. No single key can unilaterally move funds.
 
 - N-of-M signature thresholds
-- Approval queues with TTLs
+- XDR envelopes staged in Redis (24h TTL)
 - On-chain quorum verification
 - Full audit trail per proposal
 
@@ -108,6 +116,30 @@ Live treasury dashboards delivering **institutional-grade visibility** into cash
 
 </td>
 </tr>
+<tr>
+<td width="50%">
+
+### 🗺️ Real-Time Transit Map
+A **live WebSocket-powered transaction visualization** engine. Watch every payment pulse through the network in real time — zero polling, pure push.
+
+- `tokio::sync::broadcast` fan-out to all clients
+- Framer Motion animated state transitions
+- Org-ID scoped — zero cross-tenant leakage
+- Sub-3-second ledger-to-UI latency
+
+</td>
+<td width="50%">
+
+### 🏦 Institutional Key Management
+Layered **non-custodial security** that mirrors what enterprise platforms like Ledger Enterprise and Fireblocks deploy — without custodial risk.
+
+- On-chain Soroban `AdminArray` enforcement
+- Flutter mobile app as hardware secure enclave
+- iOS Secure Enclave / Android Keystore signing
+- Private keys never leave the hardware chip
+
+</td>
+</tr>
 </table>
 
 ---
@@ -119,34 +151,54 @@ Live treasury dashboards delivering **institutional-grade visibility** into cash
 ```mermaid
 flowchart TD
     classDef default fill:#1E293B,stroke:#6366f1,stroke-width:2px,color:#fff;
-    classDef gold fill:#1a1400,stroke:#eab308,stroke-width:2px,color:#eab308;
-    classDef action fill:#064E3B,stroke:#10B981,stroke-width:2px,color:#fff;
-    classDef rust fill:#2d1a0e,stroke:#E43716,stroke-width:2px,color:#E43716;
+    classDef gold    fill:#1a1400,stroke:#eab308,stroke-width:2px,color:#eab308;
+    classDef action  fill:#064E3B,stroke:#10B981,stroke-width:2px,color:#fff;
+    classDef rust    fill:#2d1a0e,stroke:#E43716,stroke-width:2px,color:#E43716;
+    classDef db      fill:#0a1a0a,stroke:#22c55e,stroke-width:2px,color:#22c55e;
+    classDef cache   fill:#1a1000,stroke:#eab308,stroke-width:2px,color:#eab308;
+    classDef chain   fill:#0a0a1a,stroke:#6366f1,stroke-width:2px,color:#6366f1;
+    classDef mobile  fill:#0a0a2e,stroke:#a855f7,stroke-width:2px,color:#a855f7;
 
-    subgraph Frontend ["Next.js 15 Frontend (Vercel)"]
-        UI[Treasury Dashboard]:::gold
-        UI --> B[Batch Transfer Center]
-        UI --> S[Smart Routing]
-        UI --> M[Multi-Sig Approvals]
-        UI --> A[Analytics Engine]
+    User(["👤 Treasury Operator"])
+    Mobile(["📱 Flutter Mobile Wallet"]):::mobile
+
+    subgraph Frontend ["Next.js 15 — Vercel CDN"]
+        UI["🖥️ Treasury Dashboard"]:::gold
+        TM["🗺️ Transit Map\nWebSocket Live View"]
+        UI --> B["💸 Batch Transfers"]
+        UI --> S["🧭 Smart Routing"]
+        UI --> M["🔐 Multi-Sig Approvals"]
+        UI --> TM
     end
 
-    subgraph Backend ["Rust Backend (Railway)"]
-        API[REST API Gateway]:::rust
-        B --> API
-        S --> API
-        M --> API
+    subgraph Backend ["Rust / Axum — Railway"]
+        API["🦀 REST + WebSocket Gateway"]:::rust
+        WS["📡 tokio::sync::broadcast\nEvent Fan-out"]
+        POOL["⚙️ Channel Account\nWorker Pool"]
+        API --> WS
+        API --> POOL
     end
 
-    subgraph Blockchain ["Stellar Testnet / Mainnet"]
-        API --> H[Horizon API]:::action
-        H --> TX[Transaction Submission]
-        H --> SS[Stellar Streaming Events]
+    subgraph Storage ["Persistent Storage"]
+        PG[("🐘 PostgreSQL\nState & Audit Ledger")]:::db
+        RD[("⚡ Redis\nXDR Vault + Cache")]:::cache
     end
 
-    subgraph DB ["PostgreSQL"]
-        API --> PG[(State & Audit Log)]
+    subgraph Blockchain ["Stellar Network"]
+        HZ["🌐 Horizon API\nTx Submit & Queries"]:::chain
+        RPC["🔭 Soroban RPC\nContract Events"]:::chain
+        NET["⛓️ Stellar Ledger\n~5s Finality"]:::chain
     end
+
+    User -->|"HTTPS"| UI
+    Mobile -->|"REST / WebSocket"| API
+    B & S & M --> API
+    TM <-->|"WebSocket"| WS
+    API --> PG & RD
+    POOL --> HZ
+    API --> RPC
+    HZ & RPC --> NET
+    RPC -->|"Contract Events"| WS
 ```
 
 </div>
@@ -317,6 +369,10 @@ On Stellar, every account has a monotonically increasing sequence number. If two
 
 StellarFlow's solution: a **pool of pre-funded Channel Accounts**. Each worker task grabs one with `SELECT ... FOR UPDATE SKIP LOCKED` — a PostgreSQL advisory lock that is atomic and race-condition-proof. Each channel has its own sequence number sequence, so 100 workers can broadcast 100 transactions in true parallel without a single collision.
 
+<p align="center">
+  <img src="./assets/batch-engine.svg" alt="Parallel Batch Payment Engine Diagram" width="820" />
+</p>
+
 ---
 
 ### 4. 🔐 Multi-Sig XDR Coordination State Machine
@@ -354,6 +410,10 @@ stateDiagram-v2
 - XDR envelopes are hot data — they are read and mutated on every signature submission. Redis delivers **O(1) GET/SET** with sub-millisecond latency, critical for interactive approval UX.
 - `KEEPTTL` on every write preserves the original expiry without needing to recalculate TTL deltas — a Redis 6+ primitive that removes an entire class of race conditions.
 - PostgreSQL remains the **durable audit trail**: the `approval_signatures` table enforces `UNIQUE (approval_id, signer_address)` at the database layer, making double-signing physically impossible.
+
+<p align="center">
+  <img src="./assets/multisig-lifecycle.svg" alt="Multi-Sig XDR Approval Lifecycle" width="820" />
+</p>
 
 ---
 
@@ -521,210 +581,25 @@ This integration turns StellarFlow's multi-sig approvals from a **static rule** 
 
 ---
 
-## 🏦 Institutional-Grade DLT Architecture
-
-StellarFlow is not a standard crypto wallet. It is a **high-throughput, institutional-grade distributed ledger system** that matches the architectural pillars deployed by enterprise blockchain platforms.
-
-> *"A high-throughput distributed ledger wallet system executes and records thousands of transactions per second while maintaining self-custody or authorized institutional controls."*
-
-Here is exactly how StellarFlow maps to each enterprise-grade pillar:
-
-### Pillar 1 — High-Performance Base Layer (Parallel Throughput)
-
-| Feature | Standard Crypto App | StellarFlow |
-|---|---|---|
-| **Transaction Parallelism** | Sequential (one tx at a time) | ✅ Channel Account Worker Pool — 100+ concurrent transactions |
-| **Sequence Management** | Single account, serial nonce | ✅ `FOR UPDATE SKIP LOCKED` — each worker holds an isolated nonce |
-| **Settlement Time** | 15-60 seconds (Ethereum) | ✅ ~5 seconds — Stellar native finality |
-| **Fee Model** | User pays gas every time | ✅ Fee-Bump Transactions (Planned) — treasury sponsors all fees |
-
-### Pillar 2 — Off-Chain State Channels (Caching Layer)
-
-Instead of hammering the Stellar RPC for every UI render, StellarFlow maintains a **high-speed off-chain caching layer** on Railway:
-
-```
-User Action ──► PostgreSQL Cache ──► UI (instant)
-                      │
-                      └──► Stellar Ledger (async, ~5s settle)
-```
-
-- Multi-sig XDR envelopes are cached in **Redis with O(1) GET/SET** and a 24-hour TTL.
-- Transaction history and vault balances are served from **PostgreSQL** (not from slow RPC calls).
-- Only final settlements are written on-chain, reducing Soroban RPC load by ~80%.
-
-### Pillar 3 — Non-Custodial API Gateway (Enterprise SDK)
-
-```
-Enterprise Client
-      │
-      ▼
-  Rust/Axum API Gateway (Railway)
-      │
-      ├──► Authentication & Rate Limiting (per-org Redis Token Bucket)
-      ├──► Multi-Sig Coordination (XDR envelope builder)
-      ├──► Batch Engine (Channel Account Worker Pool)
-      └──► Stellar Network (Horizon + Soroban RPC)
-```
-
-Every treasury operation passes through the Rust/Axum gateway which enforces:
-- **Per-organization API rate limiting** via Redis Token Bucket
-- **Tenant-scoped data isolation** with `org_id` filtering at every query layer
-- **Idempotent request handling** — `tx_hash` primary key prevents double-processing
-
-### Pillar 4 — Institutional Key Management (Multi-Sig + Mobile HSM)
-
-StellarFlow's strongest security feature is its **layered key management architecture**:
-
-```
-┌─────────────────────────────────────────────────────┐
-│              StellarFlow Security Stack              │
-├─────────────────────────────────────────────────────┤
-│  Layer 1: On-Chain Multi-Sig                        │
-│  → Soroban AdminArray + Threshold enforcement       │
-│  → N-of-M signatures required for fund movement    │
-├─────────────────────────────────────────────────────┤
-│  Layer 2: Mobile Hardware Enclave (Flutter App)     │
-│  → iOS: Apple Secure Enclave (Elliptic Curve)       │
-│  → Android: Keystore / Titan Security Chip          │
-│  → Private keys NEVER leave the hardware chip       │
-├─────────────────────────────────────────────────────┤
-│  Layer 3: Redis XDR Vault (TTL-bound)               │
-│  → Partial signatures stored with 24h expiry        │
-│  → UNIQUE constraint prevents double-signing        │
-└─────────────────────────────────────────────────────┘
-```
-
-This architecture mirrors what enterprise platforms like **Ledger Enterprise** and **Fireblocks** deploy for institutional custodianship—except StellarFlow achieves it as a fully non-custodial system.
-
----
-
-## 📡 Real-Time Event-Driven Notification System
-
-StellarFlow implements a **production-grade Pub/Sub event pipeline** from Stellar ledger events to the browser UI — with zero polling on the client side.
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                  Event Flow Architecture                     │
-└─────────────────────────────────────────────────────────────┘
-
-  Stellar Ledger ──► Soroban RPC ──► Rust Event Poller
-                                           │
-                                    (tokio::spawn)
-                                           │
-                                    ┌──────▼──────┐
-                                    │  Broadcast   │
-                                    │   Channel    │◄─── PostgreSQL
-                                    │ (tokio::sync │     (idempotent
-                                    │  ::broadcast)│      tx_hash PK)
-                                    └──────┬──────┘
-                                           │ fan-out
-                           ┌───────────────┼───────────────┐
-                           ▼               ▼               ▼
-                      WebSocket        WebSocket        WebSocket
-                      Client 1         Client 2         Client N
-                     (Next.js)         (Next.js)        (Flutter)
-```
-
-### Why This Architecture Is Idempotent
-- The `transactions` table uses `tx_hash` (Stellar's unique hash) as the **primary key**.
-- Even if a network fault causes the poller to re-process the same ledger event, the `INSERT OR IGNORE` on `tx_hash` guarantees a transaction is **never recorded or displayed twice**.
-- This satisfies the enterprise requirement for **exactly-once delivery semantics** without a distributed lock manager.
-
-### Scaling Path (Planned)
-The current `tokio::sync::broadcast` channel is in-memory. The scaling upgrade path (planned for v2.0) is:
-
-```
-Current:  In-Memory Broadcast Channel  →  Handles: ~1,000 concurrent WS connections
-Planned:  Redis Pub/Sub (Streams)      →  Handles: Unlimited (horizontally scaled pods)
-```
-
----
-
-## 📱 Cross-Platform Monorepo (Web + Mobile)
-
-StellarFlow OS operates as a **unified monorepo** with a shared architectural brain, powering both the Next.js web dashboard and the Flutter mobile wallet simultaneously.
-
-```
-StellarFlow OS (Monorepo)
-├── web/                        ← Next.js 15 Treasury Dashboard
-│   ├── app/                    ← 13 views: Dashboard, Governance, Transit...
-│   ├── components/ui/          ← Carousel, GooeyNav, LaserFlow, SwapWidget
-│   └── lib/stellar.ts          ← Dual-client: Horizon (XLM) + Soroban (contracts)
-│
-├── mobile/                     ← Flutter Secure Wallet Enclave (in dev)
-│   ├── lib/core/crypto/        ← Secure Enclave / Keystore bridge
-│   ├── lib/core/network/       ← Stellar RPC + Railway API client
-│   └── lib/features/wallet/    ← Stacked card deck, balance rendering
-│
-├── backend/                    ← Rust/Axum API Gateway (Railway)
-│   └── src/                    ← 6 route modules: payments, jit, approvals...
-│
-└── docs/                       ← Obsidian Architecture Vault
-    ├── nextjs/                 ← Pages, routing, UI components
-    ├── stellar/                ← Horizon, RPC, transaction mechanics
-    ├── backend/                ← Rust API, PostgreSQL schema
-    └── contracts/              ← Soroban Rust smart contract specs
-```
-
-The `docs/` directory acts as an **AI-readable architectural brain**. Both the Flutter and web development environments are symlinked to this vault, ensuring that any AI coding assistant working on either project has instant access to the full system design before writing a single line of code.
-
----
-
-## ⚡ Coming Soon: Fee-Bump Transactions (Sponsored Fees)
-
-One of Stellar's most powerful enterprise features is **Fee-Bump Transactions** — and StellarFlow's Rust backend is architecturally ready to implement them.
-
-### What This Means for End Users
-
-```
-WITHOUT Fee-Bump:
-  User initiates transfer ──► User pays 0.0001 XLM gas fee
-
-WITH Fee-Bump (StellarFlow v2):
-  User initiates transfer ──► Treasury Master Vault pays gas fee
-                               User pays: $0.00
-```
-
-### How It Works
-
-```mermaid
-sequenceDiagram
-    participant User as 👤 Treasury User
-    participant Backend as 🦀 Rust Backend
-    participant Vault as 🏦 Master Vault
-    participant Ledger as ⛓️ Stellar Ledger
-
-    User->>Backend: POST /api/v1/transfer { amount, destination }
-    Backend->>Backend: Build inner transaction (User's source account)
-    Backend->>Backend: Wrap in Fee-Bump envelope (Vault pays fee)
-    Backend->>User: Return XDR for User signature only
-    User->>Backend: POST signed inner XDR
-    Backend->>Vault: Deduct fee from Master Vault balance
-    Backend->>Ledger: Submit Fee-Bump Transaction
-    Ledger-->>User: ✅ Transfer confirmed. Gas: $0.00
-```
-
-This positions StellarFlow as an enterprise service that can **onboard non-crypto-native employees** into a corporate treasury system without them ever needing to hold XLM for gas.
-
----
-
-
-
 ## 🛠️ Tech Stack
+
+<p align="center">
+  <img src="./assets/tech-stack-layers.svg" alt="Tech Stack Layer Diagram" width="820" />
+</p>
 
 <table>
 <tr><th>Layer</th><th>Technology</th><th>Role</th></tr>
 <tr><td>Frontend</td><td>Next.js 15, React 19, TailwindCSS v4</td><td>Treasury Dashboard UI, PWA — 13 live views</td></tr>
-<tr><td>Animations</td><td>Framer Motion, GooeyNav, LaserFlow</td><td>Micro-animations, real-time transit map canvas effects</td></tr>
-<tr><td>Backend</td><td>Rust (Axum), Tokio async runtime</td><td>API Gateway, batch engine, WebSocket event fanout</td></tr>
-<tr><td>Smart Contracts</td><td>Soroban (Rust), <code>#![no_std]</code> WASM</td><td>On-chain multi-sig, JIT routing, vault registry enforcement</td></tr>
-<tr><td>Database</td><td>PostgreSQL (SQLx pool, Railway)</td><td>State machine, approvals, audit ledger, idempotent tx_hash PK</td></tr>
-<tr><td>Cache / Broker</td><td>Redis (O(1) XDR store, planned Pub/Sub)</td><td>Multi-sig XDR vault, rate limiting, session & event cache</td></tr>
-<tr><td>Blockchain</td><td>Stellar Network, Horizon API, Soroban RPC</td><td>Dual-client: XLM transfers (Horizon) + smart contracts (RPC)</td></tr>
-<tr><td>Mobile (In Dev)</td><td>Flutter, Dart, Secure Enclave / Keystore</td><td>Hardware wallet enclave, offline signing, mobile treasury UI</td></tr>
-<tr><td>Deployment</td><td>Railway (Backend + DB), Vercel (Frontend)</td><td>CI/CD, auto-deploy on push, horizontally scaled Axum cluster</td></tr>
-<tr><td>Architecture Docs</td><td>Obsidian Vault + Markdown</td><td>AI-readable monorepo brain — cross-platform spec source of truth</td></tr>
-<tr><td>Trust (Planned)</td><td>SentinelMark Rust SDK</td><td>Behavioral continuous trust scoring, risk-driven policy engine</td></tr>
+<tr><td>Animations</td><td>Framer Motion, GooeyNav, LaserFlow</td><td>Micro-animations, real-time transit map canvas</td></tr>
+<tr><td>Backend</td><td>Rust (Axum), Tokio async runtime</td><td>REST + WebSocket API Gateway, batch engine</td></tr>
+<tr><td>Smart Contracts</td><td>Soroban (Rust), <code>#![no_std]</code> WASM</td><td>On-chain multi-sig, JIT routing, vault enforcement</td></tr>
+<tr><td>Database</td><td>PostgreSQL (SQLx pool, Railway)</td><td>State machine, approvals, idempotent audit ledger</td></tr>
+<tr><td>Cache / Broker</td><td>Redis (planned Pub/Sub upgrade)</td><td>Multi-sig XDR vault (O(1)), rate limiting, session cache</td></tr>
+<tr><td>Blockchain</td><td>Stellar Network, Horizon API, Soroban RPC</td><td>Dual-client: XLM transfers + smart contract events</td></tr>
+<tr><td>Mobile (In Dev)</td><td>Flutter, Dart, Secure Enclave / Keystore</td><td>Hardware wallet enclave, offline TX signing</td></tr>
+<tr><td>Deployment</td><td>Railway (Backend + DB), Vercel (Frontend)</td><td>CI/CD, auto-deploy, horizontally scaled Axum cluster</td></tr>
+<tr><td>Architecture Docs</td><td>Obsidian Vault + Markdown</td><td>AI-readable monorepo brain — cross-platform spec</td></tr>
+<tr><td>Trust (Planned)</td><td>SentinelMark Rust SDK</td><td>Behavioral continuous trust, risk-driven policy engine</td></tr>
 <tr><td>Notifications (Planned)</td><td>FCM (Firebase Cloud Messaging)</td><td>Mobile push alerts for multi-sig approval requests</td></tr>
 </table>
 

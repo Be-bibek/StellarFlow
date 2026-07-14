@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="420" viewBox="0 0 820 420">
+  <defs>
+    <style>
+      :root {
+        --bg-color: #ffffff;
+        --text-primary: #1f2937;
+        --text-secondary: #6b7280;
+        --border-color: #e5e7eb;
+        
+        --gold-bg: #fef08a;
+        --gold-border: #eab308;
+        --gold-text: #854d0e;
+        
+        --blue-bg: #bfdbfe;
+        --blue-border: #3b82f6;
+        --blue-text: #1e40af;
+        
+        --red-bg: #fecaca;
+        --red-border: #ef4444;
+        --red-text: #991b1b;
+        
+        --gray-bg: #f3f4f6;
+        --gray-border: #9ca3af;
+        --gray-text: #374151;
+        
+        --indigo-bg: #e0e7ff;
+        --indigo-border: #6366f1;
+        --indigo-text: #3730a3;
+      }
+      
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg-color: #0f172a;
+          --text-primary: #f8fafc;
+          --text-secondary: #94a3b8;
+          --border-color: #334155;
+          
+          --gold-bg: #713f12;
+          --gold-text: #fef08a;
+          
+          --blue-bg: #1e3a8a;
+          --blue-text: #bfdbfe;
+          
+          --red-bg: #7f1d1d;
+          --red-text: #fecaca;
+          
+          --gray-bg: #334155;
+          --gray-text: #f1f5f9;
+          
+          --indigo-bg: #312e81;
+          --indigo-text: #c7d2fe;
+        }
+      }
+      
+      .title { font-family: system-ui, -apple-system, sans-serif; font-size: 22px; font-weight: 700; fill: var(--text-primary); }
+      .subtitle { font-family: system-ui, -apple-system, sans-serif; font-size: 14px; fill: var(--text-secondary); }
+      .label { font-family: system-ui, -apple-system, sans-serif; font-size: 14px; font-weight: 500; fill: var(--text-primary); }
+      .bar-text { font-family: system-ui, -apple-system, sans-serif; font-size: 14px; font-weight: 600; }
+      .grid-line { stroke: var(--border-color); stroke-width: 1; stroke-dasharray: 4 4; }
+    </style>
+  </defs>
+
+  <rect width="820" height="420" rx="12" fill="var(--bg-color)" />
+  <rect width="820" height="420" rx="12" fill="none" stroke="var(--border-color)" stroke-width="2" />
+
+  <text x="410" y="40" text-anchor="middle" class="title">Settlement Latency Comparison</text>
+  <text x="410" y="62" text-anchor="middle" class="subtitle">Lower is better • StellarFlow leverages SCP consensus for sub-5s finality</text>
+
+  <!-- Grid Lines -->
+  <line x1="220" y1="80" x2="220" y2="340" class="grid-line" />
+  <line x1="360" y1="80" x2="360" y2="340" class="grid-line" />
+  <line x1="500" y1="80" x2="500" y2="340" class="grid-line" />
+  <line x1="640" y1="80" x2="640" y2="340" class="grid-line" />
+  <line x1="780" y1="80" x2="780" y2="340" class="grid-line" />
+
+  <!-- Legacy Wire -->
+  <text x="200" y="118" text-anchor="end" class="label">Legacy Wire Transfer</text>
+  <rect x="220" y="100" width="550" height="32" rx="6" fill="var(--red-bg)" stroke="var(--red-border)" stroke-width="1.5" />
+  <text x="760" y="121" text-anchor="end" fill="var(--red-text)" class="bar-text">2–3 Days</text>
+
+  <!-- SWIFT -->
+  <text x="200" y="168" text-anchor="end" class="label">SWIFT / Banking Rails</text>
+  <rect x="220" y="150" width="340" height="32" rx="6" fill="var(--gray-bg)" stroke="var(--gray-border)" stroke-width="1.5" />
+  <text x="550" y="171" text-anchor="end" fill="var(--gray-text)" class="bar-text">12 Hours</text>
+
+  <!-- Ethereum -->
+  <text x="200" y="218" text-anchor="end" class="label">Ethereum (L1)</text>
+  <rect x="220" y="200" width="140" height="32" rx="6" fill="var(--indigo-bg)" stroke="var(--indigo-border)" stroke-width="1.5" />
+  <text x="372" y="221" fill="var(--indigo-text)" class="bar-text">~60 Mins</text>
+
+  <!-- Generic Crypto -->
+  <text x="200" y="268" text-anchor="end" class="label">Generic Crypto Wallets</text>
+  <rect x="220" y="250" width="60" height="32" rx="6" fill="var(--blue-bg)" stroke="var(--blue-border)" stroke-width="1.5" />
+  <text x="290" y="271" fill="var(--blue-text)" class="bar-text">~5 Mins</text>
+
+  <!-- StellarFlow -->
+  <text x="200" y="318" text-anchor="end" class="label" font-weight="700">★ StellarFlow</text>
+  <rect x="220" y="300" width="20" height="32" rx="6" fill="var(--gold-bg)" stroke="var(--gold-border)" stroke-width="2" />
+  <text x="250" y="321" fill="var(--gold-text)" class="bar-text">~5 Seconds</text>
+
+  <line x1="40" y1="360" x2="780" y2="360" stroke="var(--border-color)" stroke-width="1" />
+  <text x="410" y="386" text-anchor="middle" class="subtitle">StellarFlow processes transactions concurrently via Channel Accounts, avoiding nonce bottlenecks.</text>
+</svg>
