@@ -10,6 +10,10 @@
   <a href="https://web3-private-production.up.railway.app/">
     <img src="./assets/railway-badge-glow.svg" height="120" alt="Hosted on Railway" />
   </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://stellar.expert/explorer/testnet/contract/CC7RCRZ3JF3W2YNTQKYTRMVGVIZGLPIX6B2R7Q6HUOWDRK3IQKRQWLKT">
+    <img src="./assets/stellar-expert-badge-glow.svg" height="120" alt="View Smart Contract on Stellar Expert" />
+  </a>
 </p>
 
 <p align="center">
