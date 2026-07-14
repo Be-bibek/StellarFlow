@@ -10,10 +10,6 @@
   <a href="https://web3-private-production.up.railway.app/">
     <img src="./assets/railway-badge-glow.svg" height="120" alt="Hosted on Railway" />
   </a>
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://stellar.expert/explorer/testnet/contract/CC7RCRZ3JF3W2YNTQKYTRMVGVIZGLPIX6B2R7Q6HUOWDRK3IQKRQWLKT">
-    <img src="./assets/stellar-expert-badge-glow.svg" height="120" alt="View Smart Contract on Stellar Expert" />
-  </a>
 </p>
 
 <p align="center">
@@ -47,6 +43,22 @@ Managing a corporate treasury on a traditional bank dashboard is like piloting a
 It is a **full-stack, enterprise-grade Treasury Operating System** that lives natively on the Stellar blockchain. StellarFlow unifies every treasury workflow — from single-click batch payouts to threshold-based multi-sig governance — into a single, beautifully designed operations center.
 
 > The goal is simple: give treasury teams the clarity of a Bloomberg terminal, the control of a smart contract, and the mobility of a mobile banking app — all in one place.
+
+---
+
+## 🌐 Live Smart Contract Deployment
+
+The core logic of **StellarFlow** is governed completely on-chain via a Soroban Smart Contract. This contract is publicly deployed and verifiable on the Stellar Testnet. 
+
+You can view the exact contract state, executed methods, and real-time ledger events directly on the Stellar Expert Explorer:
+
+<br/>
+<p align="center">
+  <a href="https://stellar.expert/explorer/testnet/contract/CC7RCRZ3JF3W2YNTQKYTRMVGVIZGLPIX6B2R7Q6HUOWDRK3IQKRQWLKT">
+    <img src="./assets/stellar-expert-badge-glow.svg" height="160" alt="View Smart Contract on Stellar Expert" />
+  </a>
+</p>
+<br/>
 
 ---
 
