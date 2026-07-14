@@ -605,45 +605,58 @@ This integration turns StellarFlow's multi-sig approvals from a **static rule** 
 
 ---
 
-## 📦 Getting Started
+## 📦 Getting Started & Local Development
+
+You can run the entire StellarFlow stack locally. Because the architecture is decoupled into microservices, you only need Node.js for the frontend and Rust for the backend.
 
 ### Prerequisites
 * **Node.js** 22+ & npm
 * **Rust** 1.75+
-* **Docker & Docker Compose** (for local PostgreSQL)
+* **Docker & Docker Compose** (for local PostgreSQL & Redis)
 
-### Installation
-
+### 1. Clone the Repository
+Open a terminal and run:
 ```bash
-# 1. Clone the repository
 git clone https://github.com/Be-bibek/StellarFlow.git
 cd StellarFlow
-
-# 2. Install frontend dependencies and start dev server
-npm install
-npm run dev
-# → App live at http://localhost:3000
-
-# 3. Start the Rust backend (separate terminal)
-cd backend
-cargo run
-# → API listening at http://localhost:8080
-
-# 4. (Optional) Start PostgreSQL via Docker
-docker-compose up -d
 ```
 
----
+### 2. Start the Database & Cache (Docker)
+The Rust backend requires PostgreSQL (for the audit ledger) and Redis (for the multi-sig XDR vault). Start them using Docker Compose:
+```bash
+docker-compose up -d
+```
+*(This spins up both Postgres and Redis silently in the background).*
 
-## 🎓 Author
+### 3. Start the Rust Backend
+Open a **new terminal window**, navigate to the backend folder, and run the Rust server:
+```bash
+cd backend
 
-**Bibek Das**  
-* B.Tech Scholar, **Electronics and Communication Engineering (ECE)**  
-* **Guru Nanak Institute of Technology**
-* Email: [bibekdas1055@gmail.com](mailto:bibekdas1055@gmail.com)  
-* GitHub: [@Be-bibek](https://github.com/Be-bibek)  
+# Create a basic .env file for local development
+echo "DATABASE_URL=postgres://postgres:postgres@localhost:5432/stellarflow" > .env
+echo "REDIS_URL=redis://localhost:6379" >> .env
+echo "PORT=8080" >> .env
 
-* 🌐 Live App: [web3-private-production.up.railway.app](https://web3-private-production.up.railway.app/)
+# Compile and run the Axum server
+cargo run
+```
+*The backend API and WebSocket gateway will now be running on `http://localhost:8080`.*
+
+### 4. Start the Next.js Frontend
+Open a **third terminal window**, stay in the root `StellarFlow` directory, and run the Next.js app:
+```bash
+# Install dependencies
+npm install
+
+# Connect the frontend to your local Rust backend
+echo "NEXT_PUBLIC_API_URL=http://localhost:8080" > .env.local
+echo "NEXT_PUBLIC_WS_URL=ws://localhost:8080" >> .env.local
+
+# Start the frontend
+npm run dev
+```
+*The Treasury Dashboard will now be live at `http://localhost:3000`.*
 
 ---
 
