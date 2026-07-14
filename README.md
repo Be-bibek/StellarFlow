@@ -55,7 +55,7 @@ You can view the exact contract state, executed methods, and real-time ledger ev
 <br/>
 <p align="center">
   <a href="https://stellar.expert/explorer/testnet/contract/CC7RCRZ3JF3W2YNTQKYTRMVGVIZGLPIX6B2R7Q6HUOWDRK3IQKRQWLKT">
-    <img src="./assets/stellar-expert-badge-glow.svg" height="160" alt="View Smart Contract on Stellar Expert" />
+    <img src="./assets/stellar-expert-badge-glow.svg" height="200" alt="View Smart Contract on Stellar Expert" />
   </a>
 </p>
 <br/>
