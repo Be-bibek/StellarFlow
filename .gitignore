@@ -141,3 +141,7 @@ coreconcept.md
 
 .cursor/
 .cursorrules
+
+# Private Interview Playbooks
+Playbook_*.md
+live_interview_playbook.md
